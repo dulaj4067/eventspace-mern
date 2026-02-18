@@ -137,3 +137,4 @@ bookingSchema.virtual('dateRange').get(function() {
 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
+module.exports = Booking;
