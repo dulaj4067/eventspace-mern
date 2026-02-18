@@ -34,12 +34,12 @@ const bookingSchema = new Schema({
   startTime: { //start time in HH:MM fromat
     type: String,
     required: [true, 'Start time is required'],
-    match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Please provide time in HH:MM format']
+    match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, ' provide time in HH:MM format']
   },
   endTime: { //end time 
     type: String,
     required: [true, 'End time is required'],
-    match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Please provide time in HH:MM format']
+    match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, ' provide time in HH:MM format']
   },
   duration: { // Duration in hours
     type: Number, 
