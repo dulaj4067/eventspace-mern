@@ -7,6 +7,8 @@ const app = express();
 
 // Import routes
 const userRoutes = require("./routers/userRoutes");
+const bookingRoutes = require("./routers/Bookingroutes");
+
 
 // Middleware
 app.use(cors());
@@ -15,6 +17,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/bookings", bookingRoutes);
+
 
 // Home route
 app.get("/", (req, res) => {
