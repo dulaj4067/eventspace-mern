@@ -10,6 +10,7 @@
 
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const Facility = require('../models/Facilities');
 
 // 1. CREATE BOOKING
 
@@ -29,8 +30,55 @@ const createBooking = async (req, res) => {
         } = req.body;
 
          //*********/
-        // TODO: Check if facility is already booked for this date/time
-        // TODO: Validate facility working hours
+    // TODO: Check if facility is already booked for this date/time
+
+        // Check if facility is already booked for this date/time
+    const overlappingBooking = await Booking.findOne({
+        facility,
+        date: new Date(date),
+        status: { $in: ['pending', 'confirmed'] }, // only consider active bookings
+        $or: [
+            { 
+                startTime: { $lt: endTime },
+                endTime: { $gt: startTime }
+            }
+        ]
+    });
+
+    if (overlappingBooking) {
+        return res.status(400).json({
+            success: false,
+            message: 'Facility is already booked for the selected date and time.'
+        });
+    }
+
+
+    // TODO: Validate facility working hours
+
+    // Fetch facility from DB before using its schedule
+    /*    const facilityData = await Facility.findById(facility);
+        if (!facilityData) {
+            return res.status(404).json({ success: false, message: 'Facility not found' });
+        }
+
+        // Get day of week
+        const dayNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        const day = dayNames[new Date(date).getDay()];
+
+        // Get schedule for that day
+        const schedule = facilityData.availability.schedule[day];
+
+        // Check if facility is open and booking is within working hours
+        if (!schedule.isOpen || startTime < schedule.openTime || endTime > schedule.closeTime) {
+            return res.status(400).json({
+                success: false,
+                message: `Booking time is outside facility working hours (${schedule.openTime} - ${schedule.closeTime})`
+            });
+        }*/
+    
+    
+
+
 
         // Create booking object
         const newBooking = new Booking({
@@ -135,6 +183,14 @@ const cancelBooking = async (req, res) => {
 
         //*********/
         // TODO: Check if cancellation is allowed (before startTime) ****
+        const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00`);
+
+        if (new Date() > bookingStart) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot cancel booking after it has started.'
+            });
+        }
 
         // Update cancellation info
         booking.cancellation = {
