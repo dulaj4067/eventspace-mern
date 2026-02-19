@@ -8,8 +8,6 @@ const app = express();
 // Import routes
 const userRoutes = require("./routers/userRoutes");
 const bookingRoutes = require("./routers/Bookingroutes");
-
-const userRoutes = require("./routers/Userroutes");
 const adminRoutes = require("./routers/AdminRoutes.js");
 const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
 
