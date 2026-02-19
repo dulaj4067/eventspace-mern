@@ -6,6 +6,9 @@ require("dotenv").config();
 const app = express();
 
 // Import routes
+const userRoutes = require("./routers/userRoutes");
+const bookingRoutes = require("./routers/Bookingroutes");
+
 const userRoutes = require("./routers/Userroutes");
 const adminRoutes = require("./routers/AdminRoutes.js");
 const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
@@ -17,6 +20,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/bookings", bookingRoutes);
+
 app.use("/api/admins", adminRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
 
