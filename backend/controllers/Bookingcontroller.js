@@ -29,8 +29,8 @@ const createBooking = async (req, res) => {
             specialRequests
         } = req.body;
 
-         //*********/
-    // TODO: Check if facility is already booked for this date/time
+         
+    //  Check if facility is already booked for this date/time
 
         // Check if facility is already booked for this date/time
     const overlappingBooking = await Booking.findOne({
@@ -181,8 +181,8 @@ const cancelBooking = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        //*********/
-        // TODO: Check if cancellation is allowed (before startTime) ****
+        
+        //  Check if cancellation is allowed (before startTime) ****
         const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00`);
 
         if (new Date() > bookingStart) {
