@@ -6,7 +6,9 @@ require("dotenv").config();
 const app = express();
 
 // Import routes
-const userRoutes = require("./routers/userRoutes");
+const userRoutes = require("./routers/Userroutes.js");
+const adminRoutes = require("./routers/AdminRoutes.js");
+const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
 
 // Middleware
 app.use(cors());
@@ -15,6 +17,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/admins", adminRoutes);
+app.use("/api/admin-settings", adminSettingsRoutes);
 
 // Home route
 app.get("/", (req, res) => {
