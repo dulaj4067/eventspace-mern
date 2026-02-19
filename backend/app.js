@@ -8,8 +8,7 @@ const app = express();
 // Import routes
 const userRoutes = require("./routers/userRoutes");
 const bookingRoutes = require("./routers/Bookingroutes");
-const adminRoutes = require("./routers/AdminRoutes.js");
-const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
+
 
 // Middleware
 app.use(cors());
@@ -20,8 +19,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 
-app.use("/api/admins", adminRoutes);
-app.use("/api/admin-settings", adminSettingsRoutes);
 
 // Home route
 app.get("/", (req, res) => {

@@ -1,14 +1,20 @@
 import React from 'react';
-import { RouterProvider } from 'react-router';
-import { router } from './routes.js';
-import { Toaster } from './components/ui/sonner.jsx';
-import { AuthProvider } from './context/AuthContext.jsx';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './components/Login';
+import Register from './components/Register';
+import Home from './components/Home';
 
-export default function App() {
+function App() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-      <Toaster />
-    </AuthProvider>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/home" element={<Home />} />
+      </Routes>
+    </Router>
   );
 }
+
+export default App;
