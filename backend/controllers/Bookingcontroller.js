@@ -123,12 +123,12 @@ const getBookings = async (req, res) => {
             bookings = await Booking.find({ user: userId })
                 .populate('user')
                 .populate('facility')
-                .populate('event');
+                //.populate('event');
         } else {
             bookings = await Booking.find()
                 .populate('user')
                 .populate('facility')
-                .populate('event');
+                //.populate('event');
         }
 
         res.status(200).json({ success: true, data: bookings });
