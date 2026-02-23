@@ -10,6 +10,8 @@ const userRoutes = require("./routers/userRoutes");
 const bookingRoutes = require("./routers/Bookingroutes");
 const adminRoutes = require("./routers/AdminRoutes.js");
 const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
+const facilityRoutes = require("./routers/FacilitiesRoutes");
+const eventRoutes = require("./routers/EventRoutes.js");
 
 // Middleware
 app.use(cors());
