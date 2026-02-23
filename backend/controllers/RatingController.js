@@ -8,10 +8,10 @@ const Facility = require('../models/Facilities');
 // 1. CREATE RATING
 const createRating = async (req, res) => {
     try {
-        // ✅ FIXED: changed userId/bookingId/facilityId → user/booking/facility
+        // ID- user/booking/facility
         const { user, booking, facility, event, rating, title, comment, categories, images } = req.body;
 
-        // ✅ FIXED: validation now uses correct field names
+        //  validation now uses correct field names
         if (!user || !booking || !rating) {
             return res.status(400).json({ success: false, message: 'User, booking, and rating are required' });
         }
@@ -30,7 +30,7 @@ const createRating = async (req, res) => {
             if (!facilityDoc) return res.status(404).json({ success: false, message: 'Facility not found' });
         }
 
-        // ✅ FIXED: create rating using correct field names
+        // create rating using correct field names
         const newRating = new Rating({
             user,
             booking,
@@ -60,13 +60,13 @@ const getRatings = async (req, res) => {
         const filter = {};
         if (userId) filter.user = userId;
         if (facilityId) filter.facility = facilityId;
-        //if (eventId) filter.event = eventId;
+        if (eventId) filter.event = eventId; 
         if (status) filter.status = status;
 
         const ratings = await Rating.find(filter)
             .populate('user', 'name email')
             .populate('facility', 'name type')
-            //.populate('event', 'name')
+            .populate('event', 'name') 
             .populate('booking', 'date startTime endTime');
 
         res.status(200).json({ success: true, data: ratings });
@@ -117,7 +117,7 @@ const deleteRating = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Access denied' });
         }
 
-        await ratingDoc.deleteOne(); // ✅ FIXED: .remove() is deprecated, use .deleteOne()
+        await ratingDoc.deleteOne(); // .remove() is deprecated, use .deleteOne()
         res.status(200).json({ success: true, message: 'Rating deleted successfully' });
 
     } catch (error) {
