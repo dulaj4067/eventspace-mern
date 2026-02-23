@@ -10,7 +10,6 @@ const userRoutes = require("./routers/userRoutes");
 const bookingRoutes = require("./routers/Bookingroutes");
 const adminRoutes = require("./routers/AdminRoutes.js");
 const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
-const ratingRoutes = require('./routers/RatingRoutes');
 
 // Middleware
 app.use(cors());
@@ -23,8 +22,6 @@ app.use("/api/bookings", bookingRoutes);
 
 app.use("/api/admins", adminRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
-
-app.use('/api/ratings', ratingRoutes);
 
 // Home route
 app.get("/", (req, res) => {
