@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const facilityController = require("../controllers/facility.controller");
+const facilityController = require("../controllers/Facilitiescontroller");
 
 router.post("/", facilityController.createFacility);
 router.post("/bulk", facilityController.createFacilitiesBulk);
