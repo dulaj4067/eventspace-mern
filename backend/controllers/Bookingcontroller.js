@@ -53,10 +53,10 @@ const createBooking = async (req, res) => {
     }
 
 
-    // TODO: Validate facility working hours
+    //  Validate facility working hours
 
     // Fetch facility from DB before using its schedule
-    /*    const facilityData = await Facility.findById(facility);
+        const facilityData = await Facility.findById(facility);
         if (!facilityData) {
             return res.status(404).json({ success: false, message: 'Facility not found' });
         }
@@ -74,7 +74,7 @@ const createBooking = async (req, res) => {
                 success: false,
                 message: `Booking time is outside facility working hours (${schedule.openTime} - ${schedule.closeTime})`
             });
-        }*/
+        }
     
     
 
