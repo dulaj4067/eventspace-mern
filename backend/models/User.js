@@ -75,9 +75,6 @@ const userSchema = new Schema({
   timestamps: true // Adds createdAt and updatedAt
 });
 
-// Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;
