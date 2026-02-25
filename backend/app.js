@@ -6,7 +6,7 @@ require("dotenv").config();
 const app = express();
 
 // Import routes
-const userRoutes = require("./routers/userRoutes");
+const userRoutes = require("./routers/Userroutes");
 const bookingRoutes = require("./routers/Bookingroutes");
 //const adminRoutes = require("./routers/AdminRoutes.js");
 const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
