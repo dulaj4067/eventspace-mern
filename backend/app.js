@@ -13,7 +13,6 @@ const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
 const ratingRoutes = require('./routers/RatingRoutes');
 const eventRoutes = require("./routers/EventRoutes.js");
 const facilityRoutes = require("./routers/FacilitiesRoutes");
-const eventRoutes = require("./routers/EventRoutes.js");
 const paymentRoutes = require("./routers/PaymentRoutes");
 //const paymentLogsRoutes = require("./routers/paymentLogsRoutes");
 
@@ -26,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/facilities", facilityRoutes);
-app.use("/api/admins", adminRoutes);
+//app.use("/api/admins", adminRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
 
 
