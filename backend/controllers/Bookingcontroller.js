@@ -29,8 +29,8 @@ const createBooking = async (req, res) => {
             specialRequests
         } = req.body;
 
-         //*********/
-    // TODO: Check if facility is already booked for this date/time
+         
+    //  Check if facility is already booked for this date/time
 
         // Check if facility is already booked for this date/time
     const overlappingBooking = await Booking.findOne({
@@ -53,10 +53,10 @@ const createBooking = async (req, res) => {
     }
 
 
-    // TODO: Validate facility working hours
+    //  Validate facility working hours
 
     // Fetch facility from DB before using its schedule
-    /*    const facilityData = await Facility.findById(facility);
+        const facilityData = await Facility.findById(facility);
         if (!facilityData) {
             return res.status(404).json({ success: false, message: 'Facility not found' });
         }
@@ -74,7 +74,7 @@ const createBooking = async (req, res) => {
                 success: false,
                 message: `Booking time is outside facility working hours (${schedule.openTime} - ${schedule.closeTime})`
             });
-        }*/
+        }
     
     
 
@@ -123,12 +123,12 @@ const getBookings = async (req, res) => {
             bookings = await Booking.find({ user: userId })
                 .populate('user')
                 .populate('facility')
-                .populate('event');
+                //.populate('event');
         } else {
             bookings = await Booking.find()
                 .populate('user')
                 .populate('facility')
-                .populate('event');
+                //.populate('event');
         }
 
         res.status(200).json({ success: true, data: bookings });
@@ -181,8 +181,8 @@ const cancelBooking = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        //*********/
-        // TODO: Check if cancellation is allowed (before startTime) ****
+        
+        //  Check if cancellation is allowed (before startTime) ****
         const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00`);
 
         if (new Date() > bookingStart) {
