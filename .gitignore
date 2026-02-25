@@ -1,3 +1,6 @@
+
 /frontend/
+/backend/
+
 .env
 .env.*

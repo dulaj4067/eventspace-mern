@@ -6,12 +6,16 @@ require("dotenv").config();
 const app = express();
 
 // Import routes
-const userRoutes = require("./routers/userRoutes");
+const userRoutes = require("./routers/Userroutes");
 const bookingRoutes = require("./routers/Bookingroutes");
-const adminRoutes = require("./routers/AdminRoutes.js");
+//const adminRoutes = require("./routers/AdminRoutes.js");
 const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
 const ratingRoutes = require('./routers/RatingRoutes');
 const eventRoutes = require("./routers/EventRoutes.js");
+const facilityRoutes = require("./routers/FacilitiesRoutes");
+const eventRoutes = require("./routers/EventRoutes.js");
+const paymentRoutes = require("./routers/PaymentRoutes");
+//const paymentLogsRoutes = require("./routers/paymentLogsRoutes");
 
 // Middleware
 app.use(cors());
@@ -21,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
-
+app.use("/api/facilities", facilityRoutes);
 app.use("/api/admins", adminRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
 
@@ -29,6 +33,10 @@ app.use("/api/admin-settings", adminSettingsRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use("/api/events", eventRoutes);
 
+//app.use("/api/admins", adminRoutes);
+app.use("/api/admin-settings", adminSettingsRoutes);
+app.use("/api/payments", paymentRoutes);
+//app.use("/api/payment-logs", paymentLogsRoutes);
 
 
 // Home route
