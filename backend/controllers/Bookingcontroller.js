@@ -17,7 +17,6 @@ const Facility = require('../models/Facilities');
 const createBooking = async (req, res) => {
     try {
         const {
-            user,
             facility,
             event,
             date,
@@ -29,57 +28,52 @@ const createBooking = async (req, res) => {
             specialRequests
         } = req.body;
 
-         
+        //   use authenticated user from JWT
+        const user = req.user.id;
+
+
 
         // Check if facility is already booked for this date/time
-    const overlappingBooking = await Booking.findOne({
-        facility,
-        date: new Date(date),
-        status: { $in: ['pending', 'confirmed'] }, // only consider active bookings
-        $or: [
-            { 
-                startTime: { $lt: endTime },
-                endTime: { $gt: startTime }
-            }
-        ]
-    });
-
-    if (overlappingBooking) {
-        return res.status(400).json({
-            success: false,
-            message: 'Facility is already booked for the selected date and time.'
+        const overlappingBooking = await Booking.findOne({
+            facility,
+            date: new Date(date),
+            status: { $in: ['pending', 'confirmed'] },
+            $or: [
+                { 
+                    startTime: { $lt: endTime },
+                    endTime: { $gt: startTime }
+                }
+            ]
         });
-    }
+
+        if (overlappingBooking) {
+            return res.status(400).json({
+                success: false,
+                message: 'Facility is already booked for the selected date and time.'
+            });
+        }
 
 
-    //  Validate facility working hours
+        //  Validate facility working hours
 
-    // Fetch facility from DB before using its schedule
         const facilityData = await Facility.findById(facility);
         if (!facilityData) {
             return res.status(404).json({ success: false, message: 'Facility not found' });
         }
 
-        // Get day of week
         const dayNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
         const day = dayNames[new Date(date).getDay()];
-
-        // Get schedule for that day
         const schedule = facilityData.availability.schedule[day];
 
-        // Check if facility is open and booking is within working hours
         if (!schedule.isOpen || startTime < schedule.openTime || endTime > schedule.closeTime) {
             return res.status(400).json({
                 success: false,
                 message: `Booking time is outside facility working hours (${schedule.openTime} - ${schedule.closeTime})`
             });
         }
-    
-    
 
 
 
-        // Create booking object
         const newBooking = new Booking({
             user,
             facility,
@@ -87,15 +81,14 @@ const createBooking = async (req, res) => {
             date,
             startTime,
             endTime,
-            duration: calculateDuration(startTime, endTime), // helper function
+            duration: calculateDuration(startTime, endTime),
             purpose,
             attendees,
-            status: 'pending', // default status
+            status: 'pending',
             pricing,
             specialRequests
         });
 
-        // Save booking to database
         const savedBooking = await newBooking.save();
 
         res.status(201).json({
@@ -112,22 +105,19 @@ const createBooking = async (req, res) => {
 
 // 2. GET BOOKINGS
 
-// Fetch all bookings or user-specific bookings
 const getBookings = async (req, res) => {
     try {
-        const { userId } = req.query; // optional filter by user
+        const { userId } = req.query;
 
         let bookings;
         if (userId) {
             bookings = await Booking.find({ user: userId })
                 .populate('user')
-                .populate('facility')
-                //.populate('event');
+                .populate('facility');
         } else {
             bookings = await Booking.find()
                 .populate('user')
-                .populate('facility')
-                //.populate('event');
+                .populate('facility');
         }
 
         res.status(200).json({ success: true, data: bookings });
@@ -139,20 +129,19 @@ const getBookings = async (req, res) => {
 
 // 3. UPDATE BOOKING STATUS
 
-// Change booking status (e.g., admin approval/rejection)
 const updateBookingStatus = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        const { status, reason, changedBy } = req.body;
+        const { status, reason } = req.body;
 
-        // Find booking
+        //  Use authenticated admin ID for status change tracking
+        const changedBy = req.user.id;
+
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        // Update status
         booking.status = status;
 
-        // Update status history
         booking.statusHistory.push({
             status,
             changedAt: new Date(),
@@ -171,17 +160,24 @@ const updateBookingStatus = async (req, res) => {
 
 // 4. CANCEL BOOKING
 
-// User can cancel booking before start time
 const cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        const { cancelledBy, reason } = req.body;
+        const { reason } = req.body;
 
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        
-        //  Check if cancellation is allowed (before startTime) ****
+
+        //  Ownership check (user must own booking or be admin)
+        if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only cancel your own booking.'
+            });
+        }
+
+
         const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00`);
 
         if (new Date() > bookingStart) {
@@ -191,13 +187,15 @@ const cancelBooking = async (req, res) => {
             });
         }
 
-        // Update cancellation info
+        //  Use authenticated user as canceller
+        const cancelledBy = req.user.id;
+
         booking.cancellation = {
             isCancelled: true,
             cancelledAt: new Date(),
             cancelledBy,
             reason,
-            refundAmount: calculateRefund(booking) // optional helper function
+            refundAmount: calculateRefund(booking)
         };
 
         booking.status = 'cancelled';
@@ -219,7 +217,6 @@ const cancelBooking = async (req, res) => {
 
 // Helper Functions
 
-// Calculate duration in hours from start and end time
 const calculateDuration = (startTime, endTime) => {
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
@@ -227,14 +224,11 @@ const calculateDuration = (startTime, endTime) => {
     return (endH + endM/60) - (startH + startM/60);
 };
 
-// Placeholder for refund calculation
 const calculateRefund = (booking) => {
-    // Example: full refund if cancelled 24h before start
     return booking.pricing.total;
 };
 
 
-// Export all controller functions
 module.exports = {
     createBooking,
     getBookings,
