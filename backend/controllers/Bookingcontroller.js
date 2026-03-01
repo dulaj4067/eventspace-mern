@@ -30,7 +30,6 @@ const createBooking = async (req, res) => {
         } = req.body;
 
          
-    //  Check if facility is already booked for this date/time
 
         // Check if facility is already booked for this date/time
     const overlappingBooking = await Booking.findOne({
