@@ -5,6 +5,7 @@ const facilityController = require("../controllers/FacilitiesController");
 const { verifyToken, isAdmin } = require("../middleware/Authmiddleware");
 
 // Public routes
+router.get("/search", facilityController.searchFacilities);
 router.get("/", facilityController.getAllFacilities);
 router.get("/:id", facilityController.getFacilityById);
 

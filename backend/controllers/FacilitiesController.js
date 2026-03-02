@@ -1,4 +1,5 @@
-import Facility from "../models/Facility.js";
+import { algoliasearch } from 'algoliasearch';
+import Facility from "../models/Facilities.js";
 import {
   findNearbyFacilities,
   validateCoordinates,
@@ -9,11 +10,29 @@ import {
   getAddressSuggestions
 } from "../services/Nominatimservice.js";
 
+// INITIALIZE ALGOLIA
+const client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_KEY);
+const INDEX_NAME = 'facilities_index';
+
 // CREATE SINGLE FACILITY
 export const createFacility = async (req, res) => {
   try {
     const facility = new Facility(req.body);
     const savedFacility = await facility.save();
+
+    await client.saveObject({
+      indexName: INDEX_NAME,
+      body: {
+        objectID: savedFacility._id.toString(),
+        name: savedFacility.name,
+        type: savedFacility.type,
+        description: savedFacility.description,
+        capacity: savedFacility.capacity,
+        hourlyRate: savedFacility.hourlyRate,
+        location: savedFacility.location,
+        isActive: true
+      }
+    });
 
     return res.status(201).json({
       success: true,
@@ -33,6 +52,21 @@ export const createFacility = async (req, res) => {
 export const createFacilitiesBulk = async (req, res) => {
   try {
     const facilities = await Facility.insertMany(req.body);
+
+    const algoliaObjects = facilities.map(f => ({
+      objectID: f._id.toString(),
+      name: f.name,
+      type: f.type,
+      description: f.description,
+      capacity: f.capacity,
+      location: f.location,
+      isActive: true
+    }));
+
+    await client.saveObjects({
+      indexName: INDEX_NAME,
+      objects: algoliaObjects
+    });
 
     return res.status(201).json({
       success: true,
@@ -95,6 +129,38 @@ export const getAllFacilities = async (req, res) => {
   }
 };
 
+// SEARCH FACILITIES (NEW ALGOLIA ENDPOINT)
+export const searchFacilities = async (req, res) => {
+  try {
+    const { query, type } = req.query;
+
+    // Filter by type if provided (e.g., type:Studio)
+    const { results } = await client.search({
+      requests: [
+        {
+          indexName: INDEX_NAME,
+          query: query || "",
+          filters: type ? `type:"${type}"` : '',
+        },
+      ],
+    });
+
+    const hits = results && results[0] ? results[0].hits : [];
+
+    return res.status(200).json({
+      success: true,
+      total: hits.length,
+      data: hits,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Algolia search failed",
+      error: error.message,
+    });
+  }
+};
+
 // GET SINGLE FACILITY
 export const getFacilityById = async (req, res) => {
   try {
@@ -136,6 +202,13 @@ export const updateFacility = async (req, res) => {
       });
     }
 
+    await client.partialUpdateObject({
+      indexName: INDEX_NAME,
+      objectID: updatedFacility._id.toString(),
+      attributesToUpdate: req.body,
+      createIfNotExists: true
+    });
+
     return res.status(200).json({
       success: true,
       message: "Facility updated successfully",
@@ -160,6 +233,16 @@ export const updateFacilitiesBulk = async (req, res) => {
       { $set: updateData },
       { runValidators: true }
     );
+
+    const algoliaUpdates = ids.map(id => ({
+      objectID: id.toString(),
+      ...updateData
+    }));
+
+    await client.partialUpdateObjects({
+      indexName: INDEX_NAME,
+      objects: algoliaUpdates
+    });
 
     return res.status(200).json({
       success: true,
@@ -191,6 +274,11 @@ export const deleteFacility = async (req, res) => {
       });
     }
 
+    await client.deleteObject({
+      indexName: INDEX_NAME,
+      objectID: req.params.id
+    });
+
     return res.status(200).json({
       success: true,
       message: "Facility deactivated successfully",
@@ -213,6 +301,11 @@ export const deleteFacilitiesBulk = async (req, res) => {
       { _id: { $in: ids } },
       { $set: { isActive: false } }
     );
+
+    await client.deleteObjects({
+      indexName: INDEX_NAME,
+      objectIDs: ids.map(id => id.toString())
+    });
 
     return res.status(200).json({
       success: true,
@@ -353,7 +446,19 @@ export const getAddressAutocomplete = async (req, res) => {
 
 // GET FACILITY TYPES LIST
 export const getFacilityTypes = async (req, res) => {
-  const types = ['Conference Room', 'Meeting Room', 'Auditorium', 'Studio', 'Sports Facility', 'Multipurpose Hall'];
+  const types = [
+    'Conference Room', 
+    'Meeting Room', 
+    'Auditorium', 
+    'Studio', 
+    'Fitness Center', 
+    'Dining Hall', 
+    'Kitchen', 
+    'Outdoor Space', 
+    'Sports Facility', 
+    'Multipurpose Hall', 
+    'Other'
+  ];
   return res.status(200).json({ success: true, data: types });
 };
 
@@ -361,7 +466,10 @@ export const getFacilityTypes = async (req, res) => {
 export const getFacilityStats = async (req, res) => {
   try {
     const total = await Facility.countDocuments({ isActive: true });
-    const byType = await Facility.aggregate([{ $match: { isActive: true } }, { $group: { _id: '$type', count: { $sum: 1 } } }]);
+    const byType = await Facility.aggregate([
+      { $match: { isActive: true } }, 
+      { $group: { _id: '$type', count: { $sum: 1 } } }
+    ]);
 
     return res.status(200).json({ success: true, data: { totalFacilities: total, byType } });
   } catch (error) {
