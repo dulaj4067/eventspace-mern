@@ -14,8 +14,8 @@ router.put("/bulk/update", verifyToken, isAdmin, facilityController.updateFacili
 router.delete("/bulk/delete", verifyToken, isAdmin, facilityController.deleteFacilitiesBulk);
 
 
-router.post("/", facilityController.createFacility);
-router.put("/:id", facilityController.updateFacility);
-router.delete("/:id", facilityController.deleteFacility);
+router.post("/", verifyToken,  facilityController.createFacility);
+router.put("/:id", verifyToken, facilityController.updateFacility);
+router.delete("/:id", verifyToken, facilityController.deleteFacility);
 
 module.exports = router;
