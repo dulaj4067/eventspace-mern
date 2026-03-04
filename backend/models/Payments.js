@@ -3,10 +3,17 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const paymentSchema = new Schema({
+    // For venue booking payments
     bookingId: {
         type: Schema.Types.ObjectId,
         ref: 'Booking',
-        required: true
+        required: false
+    },
+    // For event registration payments
+    eventId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Event',
+        required: false
     },
     userId: {
         type: Schema.Types.ObjectId,
@@ -17,6 +24,12 @@ const paymentSchema = new Schema({
         type: Number,
         required: true,
         min: 0
+    },
+    // Distinguish between venue booking and event registration
+    paymentType: {
+        type: String,
+        required: true,
+        enum: ['venue-booking', 'event-registration']
     },
     paymentMethod: {
         type: String,
