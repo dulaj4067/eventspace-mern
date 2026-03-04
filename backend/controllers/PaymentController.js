@@ -1,7 +1,9 @@
 const Payment = require("../models/Payments");
 const PaymentLogs = require("../models/PaymentLogs");
+const Event = require("../models/Event");
+const Booking = require("../models/Booking");
 
-// Create a new payment
+// Create a payment for venue booking
 const createPayment = async (req, res) => {
     const { bookingId, userId, amount, paymentMethod } = req.body;
 
@@ -15,12 +17,40 @@ const createPayment = async (req, res) => {
     }
 
     try {
-        // Create new payment
+        // Verify booking exists
+        const booking = await Booking.findById(bookingId);
+        
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        // Check booking status
+        if (booking.status === 'cancelled') {
+            return res.status(400).json({ message: "Cannot pay for cancelled booking" });
+        }
+
+        // Check if already paid
+        if (booking.payment) {
+            const existingPayment = await Payment.findById(booking.payment);
+            if (existingPayment && existingPayment.paymentStatus === 'completed') {
+                return res.status(400).json({ message: "Booking already paid" });
+            }
+        }
+
+        // Verify amount matches booking total
+        if (amount !== booking.pricing.total) {
+            return res.status(400).json({ 
+                message: `Payment amount (${amount}) does not match booking total (${booking.pricing.total})` 
+            });
+        }
+
+        // Create new payment for venue booking
         const payment = new Payment({
             bookingId,
             userId,
             amount,
             paymentMethod,
+            paymentType: 'venue-booking',
             paymentStatus: 'pending'
         });
 
@@ -30,7 +60,7 @@ const createPayment = async (req, res) => {
         const log = new PaymentLogs({
             paymentId: payment._id,
             action: 'created',
-            message: `Payment created with amount ${amount} via ${paymentMethod}`,
+            message: `Venue booking payment created for "${booking.purpose}" with amount ${amount} via ${paymentMethod}`,
             performedBy: userId
         });
 
@@ -46,11 +76,79 @@ const createPayment = async (req, res) => {
     }
 };
 
+// Create a payment for event registration
+const createEventRegistrationPayment = async (req, res) => {
+    const { eventId, userId, amount, paymentMethod } = req.body;
+
+    // Validation
+    if (!eventId || !userId || !amount || !paymentMethod) {
+        return res.status(400).json({ message: "Please provide all required fields" });
+    }
+
+    if (amount <= 0) {
+        return res.status(400).json({ message: "Amount must be greater than 0" });
+    }
+
+    try {
+        // Verify event exists and is published
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        if (event.status !== 'published') {
+            return res.status(400).json({ message: "Event is not open for registration" });
+        }
+
+        if (event.pricing.isFree) {
+            return res.status(400).json({ message: "This event is free, no payment required" });
+        }
+
+        // Verify amount matches event price
+        if (amount !== event.pricing.price) {
+            return res.status(400).json({ 
+                message: `Payment amount (${amount}) does not match event price (${event.pricing.price})` 
+            });
+        }
+
+        // Create new payment for event registration
+        const payment = new Payment({
+            eventId,
+            userId,
+            amount,
+            paymentMethod,
+            paymentType: 'event-registration',
+            paymentStatus: 'pending'
+        });
+
+        await payment.save();
+
+        // Create payment log
+        const log = new PaymentLogs({
+            paymentId: payment._id,
+            action: 'created',
+            message: `Event registration payment created for "${event.name}" with amount ${amount} via ${paymentMethod}`,
+            performedBy: userId
+        });
+
+        await log.save();
+
+        res.status(201).json({
+            message: "Event registration payment created successfully",
+            payment
+        });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Error creating event registration payment", error: err.message });
+    }
+};
+
 // Get all payments
 const getAllPayments = async (req, res) => {
     try {
         const payments = await Payment.find()
-            .populate('bookingId', 'eventName eventDate')
+            .populate('bookingId', 'date purpose status')
+            .populate('eventId', 'name schedule.date status')
             .populate('userId', 'name email')
             .sort({ createdAt: -1 });
 
@@ -68,6 +166,7 @@ const getPaymentById = async (req, res) => {
     try {
         const payment = await Payment.findById(paymentId)
             .populate('bookingId')
+            .populate('eventId')
             .populate('userId', 'name email');
 
         if (!payment) {
@@ -87,13 +186,30 @@ const getPaymentsByUserId = async (req, res) => {
 
     try {
         const payments = await Payment.find({ userId })
-            .populate('bookingId', 'eventName eventDate')
+            .populate('bookingId', 'date purpose')
+            .populate('eventId', 'name schedule.date')
             .sort({ createdAt: -1 });
 
         res.status(200).json({ payments });
     } catch (err) {
         console.log(err);
         return res.status(500).json({ message: "Error fetching user payments", error: err.message });
+    }
+};
+
+// Get payments by event ID
+const getPaymentsByEventId = async (req, res) => {
+    const eventId = req.params.eventId;
+
+    try {
+        const payments = await Payment.find({ eventId, paymentType: 'event-registration' })
+            .populate('userId', 'name email')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({ payments });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Error fetching event payments", error: err.message });
     }
 };
 
@@ -151,7 +267,9 @@ const processPayment = async (req, res) => {
     const paymentId = req.params.id;
 
     try {
-        const payment = await Payment.findById(paymentId);
+        const payment = await Payment.findById(paymentId)
+            .populate('eventId', 'name')
+            .populate('bookingId', 'purpose');
 
         if (!payment) {
             return res.status(404).json({ message: "Payment not found" });
@@ -161,8 +279,8 @@ const processPayment = async (req, res) => {
             return res.status(400).json({ message: "Payment already completed" });
         }
 
-        // Mock payment processing logic
-        const isSuccessful = Math.random() > 0.1; // 90% success rate for mock
+        // Mock payment processing logic (90% success rate)
+        const isSuccessful = Math.random() > 0.1;
 
         if (isSuccessful) {
             payment.paymentStatus = 'completed';
@@ -172,10 +290,17 @@ const processPayment = async (req, res) => {
             await payment.save();
 
             // Create success log
+            let logMessage = '';
+            if (payment.paymentType === 'event-registration') {
+                logMessage = `Event registration payment processed successfully for "${payment.eventId?.name}". Transaction ID: ${payment.transactionId}`;
+            } else {
+                logMessage = `Venue booking payment processed successfully for "${payment.bookingId?.purpose}". Transaction ID: ${payment.transactionId}`;
+            }
+
             const log = new PaymentLogs({
                 paymentId: payment._id,
                 action: 'updated',
-                message: `Payment processed successfully. Transaction ID: ${payment.transactionId}`,
+                message: logMessage,
                 performedBy: payment.userId
             });
 
@@ -190,10 +315,14 @@ const processPayment = async (req, res) => {
             await payment.save();
 
             // Create failure log
+            const logMessage = payment.paymentType === 'event-registration'
+                ? `Event registration payment processing failed - Mock payment error`
+                : `Venue booking payment processing failed - Mock payment error`;
+
             const log = new PaymentLogs({
                 paymentId: payment._id,
                 action: 'failed',
-                message: 'Payment processing failed - Mock payment error',
+                message: logMessage,
                 performedBy: payment.userId
             });
 
@@ -249,9 +378,11 @@ const deletePayment = async (req, res) => {
 
 module.exports = {
     createPayment,
+    createEventRegistrationPayment,
     getAllPayments,
     getPaymentById,
     getPaymentsByUserId,
+    getPaymentsByEventId,
     updatePaymentStatus,
     processPayment,
     getPaymentLogs,
