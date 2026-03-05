@@ -9,9 +9,10 @@ const {
     getPaymentsByEventId,
     updatePaymentStatus,
     processPayment,
+    processStripePayment,
     getPaymentLogs,
     deletePayment
-} = require("../controllers/paymentController");
+} = require("../controllers/PaymentController");
 const { verifyToken, isAdmin } = require("../middleware/Authmiddleware");
 
 // Admin routes (must be first to avoid conflicts)
@@ -30,6 +31,7 @@ router.post("/", verifyToken, createPayment);
 // Specific payment routes (must be after specific routes like /event-registration)
 router.get("/:id", verifyToken, getPaymentById);
 router.post("/:id/process", verifyToken, processPayment);
+router.post("/:id/process-stripe", verifyToken, processStripePayment);
 router.get("/:id/logs", verifyToken, getPaymentLogs);
 router.put("/:id/status", verifyToken, isAdmin, updatePaymentStatus);
 router.delete("/:id", verifyToken, isAdmin, deletePayment);
