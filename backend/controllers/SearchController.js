@@ -1,36 +1,45 @@
-const algoliasearch = require('algoliasearch');
-const client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_KEY);
+import { algoliasearch } from 'algoliasearch';
 
-exports.algoliaSearch = async (req, res) => {
-  const { query, type, category } = req.query;
+const client = algoliasearch(
+  process.env.ALGOLIA_APP_ID,
+  process.env.ALGOLIA_ADMIN_KEY
+);
 
-  // Build the filter string (e.g., "type:Workshop")
+export const algoliaSearch = async (req, res) => {
+  const { query = '', type, category } = req.query;
+
   const filters = type ? `type:"${type}"` : '';
 
   try {
     const queries = [];
 
-    // Search Events if requested or if searching everything
     if (!category || category === 'events') {
       queries.push({
         indexName: 'events_index',
-        query: query,
-        params: { filters: filters, hitsPerPage: 10 }
+        query,
+        params: { filters, hitsPerPage: 10 }
       });
     }
 
-    // Search Facilities if requested or if searching everything
     if (!category || category === 'facilities') {
       queries.push({
         indexName: 'facilities_index',
-        query: query,
-        params: { filters: filters, hitsPerPage: 10 }
+        query,
+        params: { filters, hitsPerPage: 10 }
       });
     }
 
     const { results } = await client.multipleQueries(queries);
-    res.json(results);
+
+    return res.status(200).json({
+      success: true,
+      data: results
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
