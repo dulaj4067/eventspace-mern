@@ -10,11 +10,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "algoliasearch": "^5.49.1",
+    "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-validator": "^7.3.1",
     "framer-motion": "^12.34.0",
+    "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.564.0",
@@ -22,6 +27,7 @@
     "motion": "^12.34.0",
     "nodemon": "^3.1.11",
     "react-leaflet": "^5.0.0",
-    "react-router-dom": "^7.13.0"
+    "react-router-dom": "^7.13.0",
+    "stripe": "^20.4.0"
   }
 }

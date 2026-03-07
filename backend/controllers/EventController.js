@@ -1,27 +1,123 @@
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
+const Booking = require('../models/Booking');
+const User = require('../models/User');
+const { sendRegistrationConfirmation, sendCancellationNotice } = require('../services/emailService');
 
-/**
- * @route   POST /api/events
- * @access  Public
- */
+/* ---------------------------------------------------
+   Utility: Validate Mongo ID
+--------------------------------------------------- */
+const isValidObjectId = (id) =>
+  mongoose.Types.ObjectId.isValid(id);
+
+/* ---------------------------------------------------
+   Utility: Validate Time Format HH:MM
+--------------------------------------------------- */
+const isValidTimeFormat = (time) =>
+  /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+
+/* ---------------------------------------------------
+   CREATE EVENT
+   - Any logged in user can create an event
+   - The creator automatically becomes the organizer
+--------------------------------------------------- */
 exports.createEvent = async (req, res) => {
   try {
-    const event = await Event.create(req.body);
-    res.status(201).json({ success: true, message: 'Event created successfully', data: event });
+    const { name, type, facility, schedule, pricing, visibility } = req.body;
+
+    // ── Input Validation ────────────────────────────────────────────
+    const errors = [];
+
+    if (!name || name.trim().length < 3 || name.trim().length > 200)
+      errors.push('Event name must be between 3 and 200 characters');
+
+    if (!type || !['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'].includes(type))
+      errors.push('Invalid event type. Must be one of: conference, seminar, workshop, concert, exhibition, sports, social, other');
+
+    if (!facility)
+      errors.push('Facility is required');
+
+    if (facility && !isValidObjectId(facility))
+      errors.push('Invalid facility ID format');
+
+    if (!schedule?.date)
+      errors.push('Event date is required');
+
+    if (schedule?.startTime && !isValidTimeFormat(schedule.startTime))
+      errors.push('Invalid start time format. Use HH:MM');
+
+    if (schedule?.endTime && !isValidTimeFormat(schedule.endTime))
+      errors.push('Invalid end time format. Use HH:MM');
+
+    if (pricing?.price !== undefined && pricing.price < 0)
+      errors.push('Price must be a positive number');
+
+    if (visibility && !['public', 'private'].includes(visibility))
+      errors.push('Visibility must be public or private');
+
+    if (errors.length > 0)
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    // ───────────────────────────────────────────────────────────────
+
+    // Event time validation
+    if (schedule?.startTime && schedule?.endTime) {
+      const [startH, startM] = schedule.startTime.split(':').map(Number);
+      const [endH, endM] = schedule.endTime.split(':').map(Number);
+
+      const startTotal = startH * 60 + startM;
+      const endTotal = endH * 60 + endM;
+
+      if (endTotal <= startTotal) {
+        return res.status(400).json({
+          success: false,
+          message: 'End time must be after start time'
+        });
+      }
+    }
+
+    // Prevent creating event with a past date
+    if (schedule?.date && new Date(schedule.date) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event date must be in the future'
+      });
+    }
+
+    const event = await Event.create({
+      ...req.body,
+      organizer: req.user._id  // Always take from JWT, not from client
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Event created successfully',
+      data: event
+    });
+
   } catch (error) {
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(e => e.message);
-      return res.status(400).json({ success: false, message: messages.join(', ') });
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
     }
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-/**
- * @route   GET /api/events
- * @access  Public
- * @query   page, limit, status, type, visibility, search, tag, startDate, endDate, isFree, sortBy, sortOrder
- */
+/* ---------------------------------------------------
+   GET ALL EVENTS (Filtering + Pagination + Sorting)
+   - Public: anyone can view
+--------------------------------------------------- */
 exports.getAllEvents = async (req, res) => {
   try {
     const {
@@ -39,39 +135,82 @@ exports.getAllEvents = async (req, res) => {
       sortOrder = 'asc'
     } = req.query;
 
+    // ── Input Validation ────────────────────────────────────────────
+    const errors = [];
+
+    if (page && isNaN(parseInt(page)))
+      errors.push('Page must be a number');
+
+    if (limit && isNaN(parseInt(limit)))
+      errors.push('Limit must be a number');
+
+    if (status && !['draft', 'published', 'cancelled', 'completed'].includes(status))
+      errors.push('Invalid status value');
+
+    if (type && !['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'].includes(type))
+      errors.push('Invalid event type');
+
+    if (visibility && !['public', 'private'].includes(visibility))
+      errors.push('Visibility must be public or private');
+
+    if (errors.length > 0)
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    // ───────────────────────────────────────────────────────────────
+
     const filter = {};
-    if (status)     filter.status = status;
-    if (type)       filter.type = type;
+
+    if (status) filter.status = status;
+    if (type) filter.type = type;
     if (visibility) filter.visibility = visibility;
-    if (tag)        filter.tags = tag.toLowerCase();
-    if (isFree !== undefined) filter['pricing.isFree'] = isFree === 'true';
+    if (tag) filter.tags = tag.toLowerCase();
+    if (isFree !== undefined)
+      filter['pricing.isFree'] = isFree === 'true';
 
     if (startDate || endDate) {
       filter['schedule.date'] = {};
-      if (startDate) filter['schedule.date'].$gte = new Date(startDate);
-      if (endDate)   filter['schedule.date'].$lte = new Date(endDate);
+      if (startDate)
+        filter['schedule.date'].$gte = new Date(startDate);
+      if (endDate)
+        filter['schedule.date'].$lte = new Date(endDate);
     }
 
     if (search) {
       filter.$or = [
-        { name:        { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { location:    { $regex: search, $options: 'i' } },
-        { tags:        { $regex: search, $options: 'i' } }
+        { location: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } }
       ];
     }
 
-    const skip    = (parseInt(page) - 1) * parseInt(limit);
-    const sortObj = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+    const allowedSortFields = [
+      'schedule.date',
+      'createdAt',
+      'metrics.views'
+    ];
+
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'schedule.date';
+
+    const sortObj = {
+      [sortField]: sortOrder === 'asc' ? 1 : -1
+    };
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const [events, total] = await Promise.all([
       Event.find(filter)
         .populate('organizer', 'name email')
         .populate('facility', 'name location')
-        .populate('booking')
         .sort(sortObj)
         .skip(skip)
         .limit(parseInt(limit)),
+
       Event.countDocuments(filter)
     ]);
 
@@ -83,63 +222,177 @@ exports.getAllEvents = async (req, res) => {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / limit)
       }
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-/**
- * @route   GET /api/events/:id
- * @access  Public
- */
+/* ---------------------------------------------------
+   GET EVENT BY ID
+   - Public: anyone can view
+--------------------------------------------------- */
 exports.getEventById = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
-    }
+    const { id } = req.params;
 
-    const event = await Event.findById(req.params.id)
+    if (!isValidObjectId(id))
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format'
+      });
+
+    const event = await Event.findById(id)
       .populate('organizer', 'name email')
       .populate('facility', 'name location')
-      .populate('booking')
       .populate('attendance.registrations.user', 'name email');
 
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    if (!event)
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
 
-    // Increment view count
-    await Event.findByIdAndUpdate(req.params.id, { $inc: { 'metrics.views': 1 } });
+    // Increment views safely
+    await Event.updateOne(
+      { _id: id },
+      { $inc: { 'metrics.views': 1 } }
+    );
 
-    res.status(200).json({ success: true, message: 'Event retrieved successfully', data: event });
+    res.status(200).json({
+      success: true,
+      message: 'Event retrieved successfully',
+      data: event
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-/**
- * @route   PUT /api/events/:id
- * @access  Public
- */
+/* ---------------------------------------------------
+   UPDATE EVENT
+   - Admin: can update any event
+   - Organizer: can only update their own event
+   - Any User: not authorized
+--------------------------------------------------- */
 exports.updateEvent = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
+    const { id } = req.params;
+
+    if (!isValidObjectId(id))
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format'
+      });
+
+    if (!req.user)
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+
+    // ── Input Validation ────────────────────────────────────────────
+    const errors = [];
+
+    if (req.body.name !== undefined && (req.body.name.trim().length < 3 || req.body.name.trim().length > 200))
+      errors.push('Event name must be between 3 and 200 characters');
+
+    if (req.body.type !== undefined && !['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'].includes(req.body.type))
+      errors.push('Invalid event type');
+
+    if (req.body.schedule?.startTime && !isValidTimeFormat(req.body.schedule.startTime))
+      errors.push('Invalid start time format. Use HH:MM');
+
+    if (req.body.schedule?.endTime && !isValidTimeFormat(req.body.schedule.endTime))
+      errors.push('Invalid end time format. Use HH:MM');
+
+    if (req.body.pricing?.price !== undefined && req.body.pricing.price < 0)
+      errors.push('Price must be a positive number');
+
+    if (errors.length > 0)
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    // ───────────────────────────────────────────────────────────────
+
+    const event = await Event.findById(id);
+    if (!event)
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+
+    if (event.status === 'cancelled')
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update a cancelled event'
+      });
+
+    if (event.status === 'published')
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update a published event. Unpublish first.'
+      });
+
+    if (req.user.role !== 'admin' && req.user._id.toString() !== event.organizer.toString())
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this event'
+      });
+
+    const allowedFields = [
+      'name', 'description', 'location', 'tags', 'categories',
+      'requirements', 'agenda', 'speakers', 'sponsors',
+      'socialMedia', 'resources', 'schedule'
+    ];
+
+    const updates = {};
+    Object.keys(req.body).forEach(key => {
+      if (allowedFields.includes(key)) updates[key] = req.body[key];
+    });
+
+    if (updates.schedule?.date && new Date(updates.schedule.date) < new Date())
+      return res.status(400).json({ success: false, message: 'Event date must be in the future' });
+
+    if (updates.schedule?.startTime && !updates.schedule?.endTime)
+      return res.status(400).json({ success: false, message: 'End time is required when updating start time' });
+
+    if (updates.schedule?.endTime && !updates.schedule?.startTime)
+      return res.status(400).json({ success: false, message: 'Start time is required when updating end time' });
+
+    if (updates.schedule?.startTime && updates.schedule?.endTime) {
+      const [startH, startM] = updates.schedule.startTime.split(':').map(Number);
+      const [endH, endM] = updates.schedule.endTime.split(':').map(Number);
+
+      if ((endH * 60 + endM) <= (startH * 60 + startM))
+        return res.status(400).json({ success: false, message: 'End time must be after start time' });
     }
 
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
-
     const updated = await Event.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
+      id,
+      { $set: updates },
       { new: true, runValidators: true }
     )
       .populate('organizer', 'name email')
       .populate('facility', 'name location');
 
+    if (!updated)
+      return res.status(404).json({ success: false, message: 'Event not found' });
+
     res.status(200).json({ success: true, message: 'Event updated successfully', data: updated });
+
   } catch (error) {
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(e => e.message);
@@ -149,194 +402,402 @@ exports.updateEvent = async (req, res) => {
   }
 };
 
-/**
- * @route   DELETE /api/events/:id
- * @access  Public
- */
+/* ---------------------------------------------------
+   DELETE EVENT
+   - Admin: can delete any event
+   - Organizer: can only delete their own event
+   - Any User: not authorized
+--------------------------------------------------- */
 exports.deleteEvent = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
-    }
+    const { id } = req.params;
 
-    const event = await Event.findByIdAndDelete(req.params.id);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    if (!isValidObjectId(id))
+      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
+
+    if (!req.user)
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const event = await Event.findById(id);
+
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
+
+    if (req.user.role !== 'admin' && req.user._id.toString() !== event.organizer.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this event' });
+
+    await Event.findByIdAndDelete(id);
 
     res.status(200).json({ success: true, message: 'Event deleted successfully' });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @route   PATCH /api/events/:id/publish
- * @access  Public
- */
+/* ---------------------------------------------------
+   PUBLISH EVENT
+   - Admin: can publish any event
+   - Organizer: can only publish their own event
+   - Validates booking is confirmed before publishing
+--------------------------------------------------- */
 exports.publishEvent = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id))
       return res.status(400).json({ success: false, message: 'Invalid event ID format' });
-    }
 
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    if (!req.user)
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    if (event.status === 'published') {
-      return res.status(400).json({ success: false, message: 'Event is already published' });
-    }
+    const event = await Event.findById(id);
 
-    const updated = await Event.findByIdAndUpdate(
-      req.params.id,
-      { status: 'published' },
-      { new: true }
-    );
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
 
-    res.status(200).json({ success: true, message: 'Event published successfully', data: updated });
+    if (req.user.role !== 'admin' && req.user._id.toString() !== event.organizer.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized to publish this event' });
+
+    if (event.status === 'published')
+      return res.status(400).json({ success: false, message: 'Event already published' });
+
+    if (event.status === 'cancelled')
+      return res.status(400).json({ success: false, message: 'Cannot publish a cancelled event' });
+
+    // ── Booking Validation ──────────────────────────────────────────
+    const booking = await Booking.findById(event.booking);
+
+    if (!booking)
+      return res.status(400).json({ success: false, message: 'No booking linked to this event' });
+
+    if (booking.status !== 'confirmed')
+      return res.status(400).json({ success: false, message: 'Booking must be confirmed before publishing event' });
+
+    if (new Date(booking.date).toDateString() !== new Date(event.schedule.date).toDateString())
+      return res.status(400).json({ success: false, message: 'Booking date does not match event date' });
+
+    if (booking.facility.toString() !== event.facility.toString())
+      return res.status(400).json({ success: false, message: 'Booking facility does not match event facility' });
+    // ───────────────────────────────────────────────────────────────
+
+    event.status = 'published';
+    await event.save();
+
+    res.status(200).json({ success: true, message: 'Event published successfully', data: event });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @route   PATCH /api/events/:id/cancel
- * @access  Public
- */
+/* ---------------------------------------------------
+   CANCEL EVENT
+   - Admin: can cancel any event
+   - Organizer: can only cancel their own event
+   - Sends cancellation email to all registered users
+--------------------------------------------------- */
 exports.cancelEvent = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id))
       return res.status(400).json({ success: false, message: 'Invalid event ID format' });
+
+    if (!req.user)
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const event = await Event.findById(id);
+
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
+
+    if (req.user.role !== 'admin' && req.user._id.toString() !== event.organizer.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized to cancel this event' });
+
+    if (event.status === 'cancelled')
+      return res.status(400).json({ success: false, message: 'Event already cancelled' });
+
+    event.status = 'cancelled';
+    await event.save();
+
+    // ── Send cancellation emails to all registered users ────────────
+    try {
+      const populated = await Event.findById(id)
+        .populate('attendance.registrations.user', 'name email');
+
+      const activeRegistrations = populated.attendance.registrations
+        .filter(r => r.status !== 'cancelled');
+
+      for (const reg of activeRegistrations) {
+        if (reg.user?.email)
+          await sendCancellationNotice(reg.user.email, reg.user.name, event.name);
+      }
+    } catch (emailError) {
+      console.error('Cancellation emails failed:', emailError.message);
     }
+    // ───────────────────────────────────────────────────────────────
 
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    res.status(200).json({ success: true, message: 'Event cancelled successfully', data: event });
 
-    if (event.status === 'cancelled') {
-      return res.status(400).json({ success: false, message: 'Event is already cancelled' });
-    }
-
-    const updated = await Event.findByIdAndUpdate(
-      req.params.id,
-      { status: 'cancelled' },
-      { new: true }
-    );
-
-    res.status(200).json({ success: true, message: 'Event cancelled successfully', data: updated });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @route   POST /api/events/:id/register
- * @access  Public
- */
+/* ---------------------------------------------------
+   REGISTER FOR EVENT (Concurrency Safe + Validations)
+   - Any logged in user can register
+   - Sends confirmation email after registration
+--------------------------------------------------- */
 exports.registerForEvent = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
-    }
-
+    const { id } = req.params;
     const { userId } = req.body;
-    if (!userId) return res.status(400).json({ success: false, message: 'User ID is required' });
 
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
-    if (event.status !== 'published') return res.status(400).json({ success: false, message: 'Event is not open for registration' });
-    if (event.attendance.currentAttendees >= event.attendance.maxAttendees) {
-      return res.status(400).json({ success: false, message: 'Event is fully booked' });
-    }
+    // ── Input Validation ────────────────────────────────────────────
+    const errors = [];
+
+    if (!isValidObjectId(id))
+      errors.push('Invalid event ID format');
+
+    if (!userId)
+      errors.push('User ID is required');
+
+    if (userId && !isValidObjectId(userId))
+      errors.push('Invalid user ID format');
+
+    if (errors.length > 0)
+      return res.status(400).json({ success: false, message: 'Validation failed', errors });
+    // ───────────────────────────────────────────────────────────────
+
+    const event = await Event.findById(id);
+
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
+
+    if (event.status !== 'published')
+      return res.status(400).json({ success: false, message: 'Event is not open for registration' });
+
+    const today = new Date();
+    if (event.schedule.date < today.setHours(0, 0, 0, 0))
+      return res.status(400).json({ success: false, message: 'Cannot register for past events' });
 
     const alreadyRegistered = event.attendance.registrations.some(
       r => r.user.toString() === userId && r.status !== 'cancelled'
     );
-    if (alreadyRegistered) {
-      return res.status(400).json({ success: false, message: 'User is already registered for this event' });
+
+    if (alreadyRegistered)
+      return res.status(400).json({ success: false, message: 'User already registered' });
+
+    // ── Payment Enforcement ─────────────────────────────────────────
+    if (!event.pricing.isFree) {
+      const Payment = require('../models/Payments');
+
+      const payment = await Payment.create({
+        eventId: id,
+        userId: userId,
+        amount: event.pricing.price,
+        paymentMethod: 'mock',
+        paymentStatus: 'pending'
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Registration initiated. Complete payment to confirm.',
+        paymentRequired: true,
+        paymentId: payment._id,
+        amount: event.pricing.price,
+        currency: event.pricing.currency
+      });
     }
+    // ───────────────────────────────────────────────────────────────
 
-    event.attendance.registrations.push({
-      user: userId,
-      status: 'registered',
-      paymentStatus: event.pricing.isFree ? 'not-required' : 'pending'
-    });
-    event.attendance.currentAttendees += 1;
-    await event.save();
+    // Concurrency-safe registration using atomic $inc and $push
+    const updatedEvent = await Event.findOneAndUpdate(
+      { _id: id, 'attendance.currentAttendees': { $lt: event.attendance.maxAttendees } },
+      {
+        $push: {
+          'attendance.registrations': {
+            user: userId,
+            status: 'registered',
+            paymentStatus: 'not-required'
+          }
+        },
+        $inc: { 'attendance.currentAttendees': 1 }
+      },
+      { new: true }
+    );
 
-    res.status(200).json({ success: true, message: 'Successfully registered for event', data: event });
+    if (!updatedEvent)
+      return res.status(400).json({ success: false, message: 'Event is fully booked' });
+
+    // ── Send confirmation email ──────────────────────────────────────
+    try {
+      const user = await User.findById(userId).select('name email');
+      if (user) {
+        await sendRegistrationConfirmation(
+          user.email,
+          user.name,
+          updatedEvent.name,
+          updatedEvent.schedule.date
+        );
+      }
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError.message);
+    }
+    // ───────────────────────────────────────────────────────────────
+
+    res.status(200).json({ success: true, message: 'Successfully registered', data: updatedEvent });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @route   POST /api/events/:id/cancel-registration
- * @access  Public
- */
+/* ---------------------------------------------------
+   CANCEL REGISTRATION
+   - Any logged in user can cancel their own registration
+--------------------------------------------------- */
 exports.cancelRegistration = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
-    }
-
+    const { id } = req.params;
     const { userId } = req.body;
-    if (!userId) return res.status(400).json({ success: false, message: 'User ID is required' });
 
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    // ── Input Validation ────────────────────────────────────────────
+    const errors = [];
+
+    if (!isValidObjectId(id))
+      errors.push('Invalid event ID format');
+
+    if (!userId)
+      errors.push('User ID is required');
+
+    if (userId && !isValidObjectId(userId))
+      errors.push('Invalid user ID format');
+
+    if (errors.length > 0)
+      return res.status(400).json({ success: false, message: 'Validation failed', errors });
+    // ───────────────────────────────────────────────────────────────
+
+    const event = await Event.findById(id);
+
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
 
     const registration = event.attendance.registrations.find(
       r => r.user.toString() === userId && r.status !== 'cancelled'
     );
-    if (!registration) return res.status(404).json({ success: false, message: 'Registration not found' });
 
-    registration.status = 'cancelled';
-    event.attendance.currentAttendees = Math.max(0, event.attendance.currentAttendees - 1);
-    await event.save();
+    if (!registration)
+      return res.status(404).json({ success: false, message: 'Registration not found' });
 
-    res.status(200).json({ success: true, message: 'Registration cancelled successfully', data: event });
+    await Event.updateOne(
+      { _id: id, 'attendance.registrations._id': registration._id },
+      {
+        $set: { 'attendance.registrations.$.status': 'cancelled' },
+        $inc: { 'attendance.currentAttendees': -1 }
+      }
+    );
+
+    res.status(200).json({ success: true, message: 'Registration cancelled successfully' });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @route   GET /api/events/organizer/:organizerId
- * @access  Public
- */
+/* ---------------------------------------------------
+   GET EVENT ATTENDEES
+   - Admin: can view attendees of any event
+   - Organizer: can only view attendees of their own event
+   - Any User: not authorized
+--------------------------------------------------- */
+exports.getEventAttendees = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id))
+      return res.status(400).json({ success: false, message: 'Invalid event ID format' });
+
+    if (!req.user)
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const event = await Event.findById(id)
+      .populate('attendance.registrations.user', 'name email');
+
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
+
+    if (req.user.role !== 'admin' && req.user._id.toString() !== event.organizer.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized to view attendees for this event' });
+
+    const attendees = event.attendance.registrations.filter(r => r.status !== 'cancelled');
+
+    res.status(200).json({ success: true, message: 'Attendees retrieved successfully', data: attendees });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* ---------------------------------------------------
+   GET MY EVENTS (ORGANIZER)
+   - Returns all events created by a specific organizer
+--------------------------------------------------- */
 exports.getMyEvents = async (req, res) => {
   try {
     const { organizerId } = req.params;
-    if (!organizerId.match(/^[0-9a-fA-F]{24}$/)) {
+
+    if (!isValidObjectId(organizerId))
       return res.status(400).json({ success: false, message: 'Invalid organizer ID format' });
-    }
 
     const events = await Event.find({ organizer: organizerId })
       .populate('facility', 'name location')
       .sort({ 'schedule.date': -1 });
 
-    res.status(200).json({ success: true, message: 'Organizer events retrieved', data: events });
+    res.status(200).json({ success: true, message: 'Organizer events retrieved successfully', data: events });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @route   GET /api/events/:id/attendees
- * @access  Public
- */
-exports.getEventAttendees = async (req, res) => {
+/* ---------------------------------------------------
+   COMPLETE EVENT
+   - Admin: can complete any event
+   - Organizer: can only complete their own event
+   - Event must be published and date must be in the past
+--------------------------------------------------- */
+exports.completeEvent = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id))
       return res.status(400).json({ success: false, message: 'Invalid event ID format' });
-    }
 
-    const event = await Event.findById(req.params.id)
-      .populate('attendance.registrations.user', 'name email');
+    if (!req.user)
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+    const event = await Event.findById(id);
 
-    const attendees = event.attendance.registrations.filter(r => r.status !== 'cancelled');
+    if (!event)
+      return res.status(404).json({ success: false, message: 'Event not found' });
 
-    res.status(200).json({ success: true, message: 'Attendees retrieved successfully', data: attendees });
+    if (req.user.role !== 'admin' && req.user._id.toString() !== event.organizer.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+
+    if (event.status !== 'published')
+      return res.status(400).json({ success: false, message: 'Only published events can be marked as completed' });
+
+    if (new Date(event.schedule.date) > new Date())
+      return res.status(400).json({ success: false, message: 'Cannot complete a future event' });
+
+    event.status = 'completed';
+    await event.save();
+
+    res.status(200).json({ success: true, message: 'Event marked as completed', data: event });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -17,6 +17,8 @@ const {
     updateBookingStatus,
     cancelBooking,
     deleteBooking
+    getBookingCalendar,
+   // pushGoogleCalendar temporaly for booking calnder testing
 } = require('../controllers/Bookingcontroller');
 
 // MIDDLEWARE IMPORTS
@@ -74,6 +76,20 @@ router.delete(
     deleteBooking
 );
 
+// GET /api/bookings/calendar - Accessible by authenticated users
+router.get(
+    '/calendar',
+    verifyToken,
+    getBookingCalendar
+);
+
+//temporaly for testing google calender
+/*router.post(
+    '/push-google',
+    verifyToken,
+    isAdmin,
+    pushGoogleCalendar
+);*/
 
 // EXPORT ROUTER
 module.exports = router;

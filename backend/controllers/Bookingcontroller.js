@@ -11,6 +11,7 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Facility = require('../models/Facilities');
+const { getCalendarBookings, pushBookingToGoogleCalendar } = require('../services/BookingCalendar');
 
 // 1. CREATE BOOKING
 
@@ -150,6 +151,15 @@ const updateBookingStatus = async (req, res) => {
         });
 
         const updatedBooking = await booking.save();
+        // ✅ Add this block
+        if (status === 'confirmed') {
+            try {
+                const googleEventId = await pushBookingToGoogleCalendar(updatedBooking);
+                console.log(`✅ Booking ${bookingId} synced to Google Calendar: ${googleEventId}`);
+            } catch (calendarErr) {
+                console.error(`⚠️ Google Calendar sync failed: ${calendarErr.message}`);
+            }
+        }
         res.status(200).json({ success: true, message: 'Booking status updated', data: updatedBooking });
 
     } catch (error) {
@@ -248,6 +258,31 @@ const calculateRefund = (booking) => {
     return booking.pricing.total;
 };
 
+// GET /api/bookings/calendar
+const getBookingCalendar = async (req, res) => {
+    try {
+        const events = await getCalendarBookings();
+        res.status(200).json({ success: true, data: events });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+//temporary test booking calendar
+/*const { pushToGoogleCalendar } = require('../services/BookingCalendar');
+
+const pushGoogleCalendar = async (req, res) => {
+    try {
+        const result = await pushToGoogleCalendar();
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};*/
+
 
 module.exports = {
     createBooking,
@@ -255,4 +290,6 @@ module.exports = {
     updateBookingStatus,
     cancelBooking,
     deleteBooking
+    getBookingCalendar,
+    //pushGoogleCalendar temporaly for testing google calender
 };
