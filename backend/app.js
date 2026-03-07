@@ -13,8 +13,12 @@ const adminSettingsRoutes = require("./routers/AdminSettingsRoute.js");
 const ratingRoutes = require('./routers/RatingRoutes');
 const eventRoutes = require("./routers/EventRoutes.js");
 const facilityRoutes = require("./routers/FacilitiesRoutes");
+const searchRoutes = require("./routers/SearchRoute.js");
 const paymentRoutes = require("./routers/PaymentRoutes");
 //const paymentLogsRoutes = require("./routers/paymentLogsRoutes");
+const locationRoutes = require("./routers/LocationRoutes");
+const communityCenterRoutes = require("./routers/CommunityCenterRoutes");
+
 
 // Middleware
 app.use(cors());
@@ -25,9 +29,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/facilities", facilityRoutes);
+app.use('/api/search', searchRoutes);
 //app.use("/api/admins", adminRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
-
+app.use("/api/location", locationRoutes);
+app.use("/api/community-centers", communityCenterRoutes);
 
 app.use('/api/ratings', ratingRoutes);
 app.use("/api/events", eventRoutes);

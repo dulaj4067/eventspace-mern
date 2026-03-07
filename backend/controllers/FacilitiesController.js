@@ -1,50 +1,139 @@
+import { algoliasearch } from 'algoliasearch';
 import Facility from "../models/Facilities.js";
-import {
-  findNearbyFacilities,
-  validateCoordinates,
-  geocodeAddress,
-  reverseGeocodeCoordinates,
-  searchNearbyPlaces,
-  getRouteDistance,
-  getAddressSuggestions
-} from "../services/Nominatimservice.js";
+import FacilityOwner from "../models/FacilityOwner.js";
+import User from "../models/User.js";
 
-// CREATE SINGLE FACILITY
+const client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_KEY);
+const INDEX_NAME = 'facilities_index';
+
+// GET FACILITY BY ID
+export const getFacilityById = async (req, res) => {
+  try {
+    const facility = await Facility.findById(req.params.id)
+      .populate('owner', 'name email');
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: facility
+    });
+
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: "Failed to fetch facility",
+      error: error.message
+    });
+  }
+};
+
+// CREATE FACILITY (User becomes owner)
 export const createFacility = async (req, res) => {
   try {
-    const facility = new Facility(req.body);
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Must be logged in to create facility"
+      });
+    }
+
+    let facilityOwner = await FacilityOwner.findOne({ user: req.user._id });
+
+    if (!facilityOwner) {
+      facilityOwner = await FacilityOwner.create({
+        user: req.user._id,
+        companyName: req.body.companyName || req.user.name,
+        verified: false,
+        statistics: {
+          totalFacilities: 0,
+          activeFacilities: 0,
+          verifiedFacilities: 0
+        }
+      });
+    }
+
+    const facility = new Facility({
+      ...req.body,
+      owner: req.user._id,
+      verified: false
+    });
+
     const savedFacility = await facility.save();
+
+    facilityOwner.facilities.push(savedFacility._id);
+    facilityOwner.statistics.totalFacilities += 1;
+    facilityOwner.statistics.activeFacilities += 1;
+    await facilityOwner.save();
+
+    if (req.user.role === 'user') {
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { role: 'facility_owner' }
+      );
+    }
+
+    await client.saveObject({
+      indexName: INDEX_NAME,
+      body: {
+        objectID: savedFacility._id.toString(),
+        name: savedFacility.name,
+        type: savedFacility.type,
+        owner: savedFacility.owner.toString(),
+        verified: false,
+        isActive: true
+      }
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Facility created successfully",
-      data: savedFacility,
+      message: "Facility created successfully. FacilityOwner record created.",
+      data: {
+        facility: savedFacility,
+        facilityOwner: {
+          _id: facilityOwner._id,
+          totalFacilities: facilityOwner.statistics.totalFacilities,
+          verified: facilityOwner.verified
+        }
+      }
     });
   } catch (error) {
     return res.status(400).json({
       success: false,
       message: "Failed to create facility",
-      error: error.message,
+      error: error.message
     });
   }
 };
 
-// CREATE BULK FACILITIES
-export const createFacilitiesBulk = async (req, res) => {
+// GET FACILITY OWNER PROFILE
+export const getFacilityOwnerProfile = async (req, res) => {
   try {
-    const facilities = await Facility.insertMany(req.body);
+    const facilityOwner = await FacilityOwner.findOne({ user: req.user._id })
+      .populate('user', 'name email phone')
+      .populate('facilities', 'name type verified');
 
-    return res.status(201).json({
+    if (!facilityOwner) {
+      return res.status(404).json({
+        success: false,
+        message: "FacilityOwner profile not found"
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: "Facilities created successfully",
-      count: facilities.length,
-      data: facilities,
+      data: facilityOwner
     });
   } catch (error) {
     return res.status(400).json({
       success: false,
-      message: "Bulk creation failed",
-      error: error.message,
+      message: "Failed to fetch profile",
+      error: error.message
     });
   }
 };
@@ -94,136 +183,234 @@ export const getAllFacilities = async (req, res) => {
     });
   }
 };
-
-// GET SINGLE FACILITY
-export const getFacilityById = async (req, res) => {
+// VERIFY FACILITY (Admin only)
+export const verifyFacility = async (req, res) => {
   try {
-    const facility = await Facility.findById(req.params.id);
-
-    if (!facility || !facility.isActive) {
-      return res.status(404).json({
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
         success: false,
-        message: "Facility not found",
+        message: "Admin only"
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: facility,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid facility ID",
-      error: error.message,
-    });
-  }
-};
-
-// UPDATE SINGLE FACILITY
-export const updateFacility = async (req, res) => {
-  try {
-    const updatedFacility = await Facility.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedFacility) {
-      return res.status(404).json({
-        success: false,
-        message: "Facility not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Facility updated successfully",
-      data: updatedFacility,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: "Update failed",
-      error: error.message,
-    });
-  }
-};
-
-// UPDATE BULK FACILITIES
-export const updateFacilitiesBulk = async (req, res) => {
-  try {
-    const { ids, updateData } = req.body;
-
-    const result = await Facility.updateMany(
-      { _id: { $in: ids } },
-      { $set: updateData },
-      { runValidators: true }
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Bulk update successful",
-      modifiedCount: result.modifiedCount,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: "Bulk update failed",
-      error: error.message,
-    });
-  }
-};
-
-// DELETE SINGLE FACILITY (SOFT DELETE)
-export const deleteFacility = async (req, res) => {
-  try {
     const facility = await Facility.findByIdAndUpdate(
       req.params.id,
-      { isActive: false },
+      {
+        verified: true,
+        verificationDate: new Date()
+      },
       { new: true }
     );
 
     if (!facility) {
       return res.status(404).json({
         success: false,
-        message: "Facility not found",
+        message: "Facility not found"
+      });
+    }
+
+    const facilityOwner = await FacilityOwner.findOne({
+      facilities: facility._id
+    });
+
+    if (facilityOwner) {
+      facilityOwner.statistics.verifiedFacilities += 1;
+      await facilityOwner.save();
+    }
+
+    await client.saveObject({
+      indexName: INDEX_NAME,
+      body: {
+        objectID: facility._id.toString(),
+        verified: true
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Facility verified successfully",
+      data: facility
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: "Failed to verify facility",
+      error: error.message
+    });
+  }
+};
+
+// UPDATE FACILITY OWNER PROFILE
+export const updateFacilityOwnerProfile = async (req, res) => {
+  try {
+    const { companyName, bio, socialLinks, bankDetails, policies } = req.body;
+
+    const facilityOwner = await FacilityOwner.findOneAndUpdate(
+      { user: req.user._id },
+      {
+        companyName,
+        bio,
+        socialLinks,
+        bankDetails,
+        policies
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!facilityOwner) {
+      return res.status(404).json({
+        success: false,
+        message: "FacilityOwner profile not found"
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Facility deactivated successfully",
+      message: "Profile updated successfully",
+      data: facilityOwner
     });
   } catch (error) {
     return res.status(400).json({
       success: false,
-      message: "Delete failed",
-      error: error.message,
+      message: "Failed to update profile",
+      error: error.message
     });
   }
 };
 
-// DELETE BULK FACILITIES (SOFT DELETE)
-export const deleteFacilitiesBulk = async (req, res) => {
+// GET OWNER'S FACILITIES
+export const getMyFacilities = async (req, res) => {
   try {
-    const { ids } = req.body;
+    const { page = 1, limit = 10, verified } = req.query;
 
-    const result = await Facility.updateMany(
-      { _id: { $in: ids } },
-      { $set: { isActive: false } }
-    );
+    const filter = { owner: req.user._id };
+
+    if (verified !== undefined) {
+      filter.verified = verified === 'true';
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [facilities, total] = await Promise.all([
+      Facility.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Facility.countDocuments(filter)
+    ]);
 
     return res.status(200).json({
       success: true,
-      message: "Bulk delete successful",
-      modifiedCount: result.modifiedCount,
+      data: facilities,
+      meta: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
     });
   } catch (error) {
     return res.status(400).json({
       success: false,
-      message: "Bulk delete failed",
-      error: error.message,
+      message: "Failed to fetch facilities",
+      error: error.message
+    });
+  }
+};
+
+// UPDATE FACILITY (Owner only)
+export const updateFacility = async (req, res) => {
+  try {
+    const facility = await Facility.findById(req.params.id);
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    if (facility.owner.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "You can only edit your own facilities"
+      });
+    }
+
+    const { owner, verified, verificationDate, ...allowedUpdates } = req.body;
+
+    const updatedFacility = await Facility.findByIdAndUpdate(
+      req.params.id,
+      allowedUpdates,
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Facility updated successfully",
+      data: updatedFacility
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: "Failed to update facility",
+      error: error.message
+    });
+  }
+};
+
+// DELETE FACILITY (Owner only)
+export const deleteFacility = async (req, res) => {
+  try {
+    const facility = await Facility.findById(req.params.id);
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    if (facility.owner.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own facilities"
+      });
+    }
+
+    await Facility.findByIdAndDelete(req.params.id);
+
+    const facilityOwner = await FacilityOwner.findOne({
+      user: facility.owner
+    });
+
+    if (facilityOwner) {
+      facilityOwner.facilities = facilityOwner.facilities.filter(
+        f => f.toString() !== req.params.id
+      );
+      facilityOwner.statistics.totalFacilities -= 1;
+      if (facility.verified) {
+        facilityOwner.statistics.verifiedFacilities -= 1;
+      }
+      await facilityOwner.save();
+    }
+
+    await client.deleteObject({
+      indexName: INDEX_NAME,
+      objectID: req.params.id.toString()
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Facility deleted successfully"
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: "Failed to delete facility",
+      error: error.message
     });
   }
 };
@@ -353,7 +540,19 @@ export const getAddressAutocomplete = async (req, res) => {
 
 // GET FACILITY TYPES LIST
 export const getFacilityTypes = async (req, res) => {
-  const types = ['Conference Room', 'Meeting Room', 'Auditorium', 'Studio', 'Sports Facility', 'Multipurpose Hall'];
+  const types = [
+    'Conference Room', 
+    'Meeting Room', 
+    'Auditorium', 
+    'Studio', 
+    'Fitness Center', 
+    'Dining Hall', 
+    'Kitchen', 
+    'Outdoor Space', 
+    'Sports Facility', 
+    'Multipurpose Hall', 
+    'Other'
+  ];
   return res.status(200).json({ success: true, data: types });
 };
 
@@ -361,7 +560,10 @@ export const getFacilityTypes = async (req, res) => {
 export const getFacilityStats = async (req, res) => {
   try {
     const total = await Facility.countDocuments({ isActive: true });
-    const byType = await Facility.aggregate([{ $match: { isActive: true } }, { $group: { _id: '$type', count: { $sum: 1 } } }]);
+    const byType = await Facility.aggregate([
+      { $match: { isActive: true } }, 
+      { $group: { _id: '$type', count: { $sum: 1 } } }
+    ]);
 
     return res.status(200).json({ success: true, data: { totalFacilities: total, byType } });
   } catch (error) {
