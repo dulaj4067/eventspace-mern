@@ -15,7 +15,8 @@ const {
     createBooking,
     getBookings,
     updateBookingStatus,
-    cancelBooking
+    cancelBooking,
+    deleteBooking
 } = require('../controllers/Bookingcontroller');
 
 // MIDDLEWARE IMPORTS
@@ -62,6 +63,15 @@ router.patch(
     '/:bookingId/cancel',
     verifyToken,
     cancelBooking        // Controller should check if user owns booking or is admin
+);
+
+// 5. DELETE BOOKING - Admin only
+// DELETE /api/bookings/:bookingId
+router.delete(
+    '/:bookingId',
+    verifyToken,
+    isAdmin,        // Only admins can delete
+    deleteBooking
 );
 
 
