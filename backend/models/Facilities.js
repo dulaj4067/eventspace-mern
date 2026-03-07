@@ -138,6 +138,18 @@ const facilitySchema = new Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  owner: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  verificationDate: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -149,6 +161,8 @@ facilitySchema.index({ 'availability.status': 1 });
 facilitySchema.index({ hourlyRate: 1 });
 facilitySchema.index({ capacity: 1 });
 facilitySchema.index({ isActive: 1 });
+facilitySchema.index({ owner: 1 }); 
+facilitySchema.index({ verified: 1 }); 
 
 // Virtual for primary image
 facilitySchema.virtual('primaryImage').get(function() {
