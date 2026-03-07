@@ -339,6 +339,118 @@ const processPayment = async (req, res) => {
     }
 };
 
+// Process payment with Stripe
+const processStripePayment = async (req, res) => {
+    const paymentId = req.params.id;
+
+    try {
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+        const payment = await Payment.findById(paymentId)
+            .populate('eventId', 'name')
+            .populate('bookingId', 'purpose');
+
+        if (!payment) {
+            return res.status(404).json({ message: "Payment not found" });
+        }
+
+        if (payment.paymentStatus === 'completed') {
+            return res.status(400).json({ message: "Payment already completed" });
+        }
+
+        // Create Stripe Payment Intent
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(payment.amount * 100), // Convert to cents
+            currency: 'usd',
+            payment_method_types: ['card'],
+            description: payment.paymentType === 'event-registration' 
+                ? `Event Registration: ${payment.eventId?.name || 'Event'}`
+                : `Venue Booking: ${payment.bookingId?.purpose || 'Venue'}`
+        });
+
+        // For testing, auto-confirm with test card
+        const confirmedPayment = await stripe.paymentIntents.confirm(paymentIntent.id, {
+            payment_method: 'pm_card_visa'
+        });
+
+        // Check payment status
+        if (confirmedPayment.status === 'succeeded') {
+            payment.paymentStatus = 'completed';
+            payment.transactionId = confirmedPayment.id;
+            payment.paidAt = new Date();
+
+            await payment.save();
+
+            // Create success log
+            let logMessage = '';
+            if (payment.paymentType === 'event-registration') {
+                logMessage = `Stripe payment processed successfully for "${payment.eventId?.name}". Transaction ID: ${confirmedPayment.id}`;
+            } else {
+                logMessage = `Stripe payment processed successfully for "${payment.bookingId?.purpose}". Transaction ID: ${confirmedPayment.id}`;
+            }
+
+            const log = new PaymentLogs({
+                paymentId: payment._id,
+                action: 'updated',
+                message: logMessage,
+                performedBy: payment.userId
+            });
+
+            await log.save();
+
+            res.status(200).json({
+                message: "Payment processed successfully with Stripe",
+                payment,
+                stripeTransactionId: confirmedPayment.id
+            });
+        } else {
+            payment.paymentStatus = 'failed';
+            await payment.save();
+
+            const log = new PaymentLogs({
+                paymentId: payment._id,
+                action: 'failed',
+                message: `Stripe payment failed with status: ${confirmedPayment.status}`,
+                performedBy: payment.userId
+            });
+
+            await log.save();
+
+            res.status(400).json({
+                message: "Payment processing failed",
+                payment,
+                stripeStatus: confirmedPayment.status
+            });
+        }
+    } catch (err) {
+        console.log(err);
+
+        // Update payment to failed
+        try {
+            const payment = await Payment.findById(paymentId);
+            if (payment) {
+                payment.paymentStatus = 'failed';
+                await payment.save();
+
+                const log = new PaymentLogs({
+                    paymentId: payment._id,
+                    action: 'failed',
+                    message: `Stripe payment error: ${err.message}`,
+                    performedBy: payment.userId
+                });
+                await log.save();
+            }
+        } catch (updateErr) {
+            console.log("Error updating payment status:", updateErr);
+        }
+
+        return res.status(500).json({ 
+            message: "Error processing Stripe payment", 
+            error: err.message 
+        });
+    }
+};
+
 // Get payment logs
 const getPaymentLogs = async (req, res) => {
     const paymentId = req.params.id;
@@ -385,6 +497,7 @@ module.exports = {
     getPaymentsByEventId,
     updatePaymentStatus,
     processPayment,
+    processStripePayment,
     getPaymentLogs,
     deletePayment
 };
