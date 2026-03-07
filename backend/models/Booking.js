@@ -116,7 +116,15 @@ const bookingSchema = new Schema({
     changedAt: { type: Date, default: Date.now },
     changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     reason: { type: String, trim: true }
-  }]
+  }],
+
+  // Google Calendar integration — stores the event ID after a successful push
+  // Used to prevent duplicate events on repeated pushes
+  googleEventId: {
+    type: String,
+    default: null
+  }
+
 }, {
   timestamps: true
 });

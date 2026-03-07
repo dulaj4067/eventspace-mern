@@ -140,48 +140,48 @@ export const getFacilityOwnerProfile = async (req, res) => {
 
 // GET ALL FACILITIES
 export const getAllFacilities = async (req, res) => {
-    try {
-        const {
-            type,
-            status,
-            minCapacity,
-            maxCapacity,
-            minRate,
-            maxRate,
-            page = 1,
-            limit = 10,
-        } = req.query;
+  try {
+    const {
+      type,
+      status,
+      minCapacity,
+      maxCapacity,
+      minRate,
+      maxRate,
+      page = 1,
+      limit = 10,
+    } = req.query;
 
-        const filter = { isActive: true };
+    const filter = { isActive: true };
 
-        if (type) filter.type = type;
-        if (status) filter["availability.status"] = status;
-        if (minCapacity) filter.capacity = { ...filter.capacity, $gte: Number(minCapacity) };
-        if (maxCapacity) filter.capacity = { ...filter.capacity, $lte: Number(maxCapacity) };
-        if (minRate) filter.hourlyRate = { ...filter.hourlyRate, $gte: Number(minRate) };
-        if (maxRate) filter.hourlyRate = { ...filter.hourlyRate, $lte: Number(maxRate) };
+    if (type) filter.type = type;
+    if (status) filter["availability.status"] = status;
+    if (minCapacity) filter.capacity = { ...filter.capacity, $gte: Number(minCapacity) };
+    if (maxCapacity) filter.capacity = { ...filter.capacity, $lte: Number(maxCapacity) };
+    if (minRate) filter.hourlyRate = { ...filter.hourlyRate, $gte: Number(minRate) };
+    if (maxRate) filter.hourlyRate = { ...filter.hourlyRate, $lte: Number(maxRate) };
 
-        const facilities = await Facility.find(filter)
-            .skip((page - 1) * limit)
-            .limit(Number(limit))
-            .sort({ createdAt: -1 });
+    const facilities = await Facility.find(filter)
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .sort({ createdAt: -1 });
 
-        const total = await Facility.countDocuments(filter);
+    const total = await Facility.countDocuments(filter);
 
-        return res.status(200).json({
-            success: true,
-            total,
-            page: Number(page),
-            pages: Math.ceil(total / limit),
-            data: facilities,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch facilities",
-            error: error.message,
-        });
-    }
+    return res.status(200).json({
+      success: true,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+      data: facilities,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch facilities",
+      error: error.message,
+    });
+  }
 };
 // VERIFY FACILITY (Admin only)
 export const verifyFacility = async (req, res) => {

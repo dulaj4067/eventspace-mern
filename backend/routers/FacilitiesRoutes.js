@@ -22,6 +22,9 @@ router.get('/owner/my-facilities', verifyToken, getMyFacilities);
 // ADMIN ROUTES 
 router.put('/:id/verify', verifyToken, isAdmin, verifyFacility);
 
+router.post("/", verifyToken,  facilityController.createFacility);
+router.put("/:id", verifyToken, facilityController.updateFacility);
+router.delete("/:id", verifyToken, facilityController.deleteFacility);
 // DYNAMIC ROUTES
 router.get('/:id', getFacilityById);
 router.post('/', verifyToken, createFacility);

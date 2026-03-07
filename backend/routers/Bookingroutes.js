@@ -15,7 +15,9 @@ const {
     createBooking,
     getBookings,
     updateBookingStatus,
-    cancelBooking
+    cancelBooking,
+    getBookingCalendar,
+   // pushGoogleCalendar temporaly for booking calnder testing
 } = require('../controllers/Bookingcontroller');
 
 // MIDDLEWARE IMPORTS
@@ -64,6 +66,20 @@ router.patch(
     cancelBooking        // Controller should check if user owns booking or is admin
 );
 
+// GET /api/bookings/calendar - Accessible by authenticated users
+router.get(
+    '/calendar',
+    verifyToken,
+    getBookingCalendar
+);
+
+//temporaly for testing google calender
+/*router.post(
+    '/push-google',
+    verifyToken,
+    isAdmin,
+    pushGoogleCalendar
+);*/
 
 // EXPORT ROUTER
 module.exports = router;
