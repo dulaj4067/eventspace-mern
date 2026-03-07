@@ -1,4 +1,4 @@
-import Facility from "../models/Facility.js";
+import Facility from "../models/Facilities.js";
 import {
   findNearbyFacilities,
   validateCoordinates,
