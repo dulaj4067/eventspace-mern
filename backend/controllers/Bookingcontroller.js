@@ -11,7 +11,7 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Facility = require('../models/Facilities');
-const { getCalendarBookings, pushBookingToGoogleCalendar } = require('../services/BookingCalendar');
+const { getCalendarBookings, pushToGoogleCalendar } = require('../services/BookingCalendar');
 
 // 1. CREATE BOOKING
 
@@ -154,8 +154,8 @@ const updateBookingStatus = async (req, res) => {
         // ✅ Add this block
         if (status === 'confirmed') {
             try {
-                const googleEventId = await pushBookingToGoogleCalendar(updatedBooking);
-                console.log(`✅ Booking ${bookingId} synced to Google Calendar: ${googleEventId}`);
+                const result = await pushToGoogleCalendar();
+                console.log(`✅ Google Calendar sync result:`, result.message);
             } catch (calendarErr) {
                 console.error(`⚠️ Google Calendar sync failed: ${calendarErr.message}`);
             }
