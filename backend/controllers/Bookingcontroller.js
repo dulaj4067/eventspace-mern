@@ -224,6 +224,26 @@ const cancelBooking = async (req, res) => {
     }
 };
 
+// 5. DELETE BOOKING (Admin only)
+
+const deleteBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        await Booking.findByIdAndDelete(bookingId);
+
+        res.status(200).json({ success: true, message: 'Booking deleted successfully' });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 
 // Helper Functions
 
@@ -269,6 +289,7 @@ module.exports = {
     getBookings,
     updateBookingStatus,
     cancelBooking,
+    deleteBooking
     getBookingCalendar,
     //pushGoogleCalendar temporaly for testing google calender
 };
