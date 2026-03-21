@@ -17,6 +17,7 @@ const {
     updateBookingStatus,
     cancelBooking,
     getBookingCalendar,
+    deleteBooking
    // pushGoogleCalendar temporaly for booking calnder testing
 } = require('../controllers/Bookingcontroller');
 
@@ -66,6 +67,15 @@ router.patch(
     cancelBooking        // Controller should check if user owns booking or is admin
 );
 
+// 5. DELETE BOOKING - Admin only
+// DELETE /api/bookings/:bookingId
+router.delete(
+    '/:bookingId',
+    verifyToken,
+    isAdmin,        // Only admins can delete
+    deleteBooking
+);
+
 // GET /api/bookings/calendar - Accessible by authenticated users
 router.get(
     '/calendar',
@@ -73,13 +83,7 @@ router.get(
     getBookingCalendar
 );
 
-//temporaly for testing google calender
-/*router.post(
-    '/push-google',
-    verifyToken,
-    isAdmin,
-    pushGoogleCalendar
-);*/
+
 
 // EXPORT ROUTER
 module.exports = router;

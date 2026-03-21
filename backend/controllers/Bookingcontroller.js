@@ -11,7 +11,7 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Facility = require('../models/Facilities');
-const { getCalendarBookings, pushBookingToGoogleCalendar } = require('../services/BookingCalendar');
+const { getCalendarBookings, pushToGoogleCalendar } = require('../services/BookingCalendar');
 
 // 1. CREATE BOOKING
 
@@ -154,8 +154,8 @@ const updateBookingStatus = async (req, res) => {
         // ✅ Add this block
         if (status === 'confirmed') {
             try {
-                const googleEventId = await pushBookingToGoogleCalendar(updatedBooking);
-                console.log(`✅ Booking ${bookingId} synced to Google Calendar: ${googleEventId}`);
+                const result = await pushToGoogleCalendar();
+                console.log(`✅ Google Calendar sync result:`, result.message);
             } catch (calendarErr) {
                 console.error(`⚠️ Google Calendar sync failed: ${calendarErr.message}`);
             }
@@ -224,6 +224,26 @@ const cancelBooking = async (req, res) => {
     }
 };
 
+// 5. DELETE BOOKING (Admin only)
+
+const deleteBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        await Booking.findByIdAndDelete(bookingId);
+
+        res.status(200).json({ success: true, message: 'Booking deleted successfully' });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 
 // Helper Functions
 
@@ -270,5 +290,6 @@ module.exports = {
     updateBookingStatus,
     cancelBooking,
     getBookingCalendar,
+    deleteBooking
     //pushGoogleCalendar temporaly for testing google calender
 };
