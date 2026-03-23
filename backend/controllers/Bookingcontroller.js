@@ -32,8 +32,6 @@ const createBooking = async (req, res) => {
         //   use authenticated user from JWT
         const user = req.user.id;
 
-
-
         // Check if facility is already booked for this date/time
         const overlappingBooking = await Booking.findOne({
             facility,
@@ -54,9 +52,7 @@ const createBooking = async (req, res) => {
             });
         }
 
-
         //  Validate facility working hours
-
         const facilityData = await Facility.findById(facility);
         if (!facilityData) {
             return res.status(404).json({ success: false, message: 'Facility not found' });
@@ -72,8 +68,6 @@ const createBooking = async (req, res) => {
                 message: `Booking time is outside facility working hours (${schedule.openTime} - ${schedule.closeTime})`
             });
         }
-
-
 
         const newBooking = new Booking({
             user,
@@ -151,7 +145,7 @@ const updateBookingStatus = async (req, res) => {
         });
 
         const updatedBooking = await booking.save();
-        // ✅ Add this block
+
         if (status === 'confirmed') {
             try {
                 const result = await pushToGoogleCalendar();
@@ -160,6 +154,7 @@ const updateBookingStatus = async (req, res) => {
                 console.error(`⚠️ Google Calendar sync failed: ${calendarErr.message}`);
             }
         }
+
         res.status(200).json({ success: true, message: 'Booking status updated', data: updatedBooking });
 
     } catch (error) {
@@ -178,7 +173,6 @@ const cancelBooking = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-
         //  Ownership check (user must own booking or be admin)
         if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({
@@ -186,7 +180,6 @@ const cancelBooking = async (req, res) => {
                 message: 'Access denied. You can only cancel your own booking.'
             });
         }
-
 
         const bookingStart = new Date(`${booking.date.toISOString().split('T')[0]}T${booking.startTime}:00`);
 
@@ -224,6 +217,7 @@ const cancelBooking = async (req, res) => {
     }
 };
 
+
 // 5. DELETE BOOKING (Admin only)
 
 const deleteBooking = async (req, res) => {
@@ -245,6 +239,18 @@ const deleteBooking = async (req, res) => {
 };
 
 
+// 6. GET BOOKING CALENDAR
+
+const getBookingCalendar = async (req, res) => {
+    try {
+        const events = await getCalendarBookings();
+        res.status(200).json({ success: true, data: events });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
 // Helper Functions
 
 const calculateDuration = (startTime, endTime) => {
@@ -258,38 +264,13 @@ const calculateRefund = (booking) => {
     return booking.pricing.total;
 };
 
-// GET /api/bookings/calendar
-const getBookingCalendar = async (req, res) => {
-    try {
-        const events = await getCalendarBookings();
-        res.status(200).json({ success: true, data: events });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
 
-//temporary test booking calendar
-/*const { pushToGoogleCalendar } = require('../services/BookingCalendar');
-
-const pushGoogleCalendar = async (req, res) => {
-    try {
-        const result = await pushToGoogleCalendar();
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};*/
-
-
+// EXPORTS
 module.exports = {
     createBooking,
     getBookings,
     updateBookingStatus,
     cancelBooking,
+    deleteBooking,
     getBookingCalendar,
-    deleteBooking
-    //pushGoogleCalendar temporaly for testing google calender
 };
