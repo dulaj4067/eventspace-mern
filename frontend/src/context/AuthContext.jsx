@@ -6,26 +6,40 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
   const login = async (email, password) => {
-    // Mock login - in production, this would call an API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setUser({
-      id: '1',
-      name: email.split('@')[0],
-      email,
+    const res = await fetch('/api/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Login failed');
+    }
+
+    localStorage.setItem('token', data.token);
+    setUser(data.user);
   };
 
   const register = async (name, email, password) => {
-    // Mock registration - in production, this would call an API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setUser({
-      id: '1',
-      name,
-      email,
+    const res = await fetch('/api/users/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
     });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Registration failed');
+    }
+
+    await login(email, password);
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
     setUser(null);
   };
 
@@ -37,6 +51,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
       }}
     >
       {children}
