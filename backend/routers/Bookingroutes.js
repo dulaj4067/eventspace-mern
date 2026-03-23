@@ -18,6 +18,7 @@ const {
     cancelBooking,
     deleteBooking
     getBookingCalendar,
+    deleteBooking
    // pushGoogleCalendar temporaly for booking calnder testing
 } = require('../controllers/Bookingcontroller');
 
@@ -83,13 +84,7 @@ router.get(
     getBookingCalendar
 );
 
-//temporaly for testing google calender
-/*router.post(
-    '/push-google',
-    verifyToken,
-    isAdmin,
-    pushGoogleCalendar
-);*/
+
 
 // EXPORT ROUTER
 module.exports = router;

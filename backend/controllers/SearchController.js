@@ -11,25 +11,27 @@ export const algoliaSearch = async (req, res) => {
   const filters = type ? `type:"${type}"` : '';
 
   try {
-    const queries = [];
+    const requests = [];
 
     if (!category || category === 'events') {
-      queries.push({
+      requests.push({
         indexName: 'events_index',
         query,
-        params: { filters, hitsPerPage: 10 }
+        filters,
+        hitsPerPage: 10
       });
     }
 
     if (!category || category === 'facilities') {
-      queries.push({
+      requests.push({
         indexName: 'facilities_index',
         query,
-        params: { filters, hitsPerPage: 10 }
+        filters,
+        hitsPerPage: 10
       });
     }
 
-    const { results } = await client.multipleQueries(queries);
+    const { results } = await client.search({ requests });
 
     return res.status(200).json({
       success: true,

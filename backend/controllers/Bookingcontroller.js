@@ -291,5 +291,6 @@ module.exports = {
     cancelBooking,
     deleteBooking
     getBookingCalendar,
+    deleteBooking
     //pushGoogleCalendar temporaly for testing google calender
 };
