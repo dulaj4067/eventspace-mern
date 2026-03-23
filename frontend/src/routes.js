@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { Layout } from './components/Layout/Layout.jsx';
 import { Home } from './components/Home/Home.jsx';
 import { Events } from './components/Events/Events.jsx';
@@ -32,6 +32,10 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <Navigate to="/login" replace />, // 👈 redirect / to /login
+      },
+      {
+        path: 'home',       // 👈 Home is now at /home
         Component: Home,
       },
       {

@@ -1,6 +1,6 @@
-import User from "../models/User.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+const User = require("../models/User");   // 👈 was: import User from "../models/User.js"
+const bcrypt = require("bcryptjs");        // 👈 was: import bcrypt from "bcryptjs"
+const jwt = require("jsonwebtoken");       // 👈 was: import jwt from "jsonwebtoken"
 
 // Register a new user
 const registerUser = async (req, res) => {
@@ -53,7 +53,6 @@ const loginUser = async (req, res) => {
     }
 
     try {
-        // Explicitly select password field
         const existingUser = await User.findOne({ email }).select("+password");
 
         if (!existingUser) {
@@ -122,7 +121,6 @@ const updateUser = async (req, res) => {
     try {
         const updateData = { ...req.body };
 
-        // Hash password if provided
         if (updateData.password) {
             if (updateData.password.length < 6) {
                 return res.status(400).json({ message: "Password must be at least 6 characters long" });
@@ -209,7 +207,6 @@ const bulkUpdateUsers = async (req, res) => {
                 if (item.data.password) {
                     item.data.password = await bcrypt.hash(item.data.password, 10);
                 }
-
                 return {
                     updateOne: {
                         filter: { _id: item.id },
@@ -254,7 +251,8 @@ const bulkDeleteUsers = async (req, res) => {
     }
 };
 
-export {
+// 👇 was: export { ... }
+module.exports = {
     registerUser,
     loginUser,
     getAllUsers,
