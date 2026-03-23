@@ -289,7 +289,6 @@ module.exports = {
     getBookings,
     updateBookingStatus,
     cancelBooking,
-    deleteBooking
     getBookingCalendar,
     deleteBooking
     //pushGoogleCalendar temporaly for testing google calender

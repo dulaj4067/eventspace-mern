@@ -16,7 +16,6 @@ const {
     getBookings,
     updateBookingStatus,
     cancelBooking,
-    deleteBooking
     getBookingCalendar,
     deleteBooking
    // pushGoogleCalendar temporaly for booking calnder testing
