@@ -8,19 +8,20 @@ import logo from '../../assets/logo.png';
 export function Layout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, isAdmin } = useAuth(); // 👈 pull isAdmin
 
   const navItems = [
-    { path: '/', label: 'Home', icon: Home },
+    { path: '/home', label: 'Home', icon: Home },
     { path: '/events', label: 'Events', icon: CalendarDays },
     { path: '/facilities', label: 'Facilities', icon: Calendar },
     { path: '/bookings', label: 'My Bookings', icon: Calendar },
-    { path: '/admin', label: 'Admin', icon: Settings },
+    // 👇 Admin tab only included if user is admin
+    ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Settings }] : []),
   ];
 
   const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/';
+    if (path === '/home') {
+      return location.pathname === '/home';
     }
     return location.pathname.startsWith(path);
   };
@@ -31,7 +32,7 @@ export function Layout() {
       <header className="bg-white/95 backdrop-blur-sm border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/home" className="flex items-center gap-3"> {/* 👈 logo links to /home */}
               <img src={logo} alt="EventSpace" className="w-10 h-10" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 EventSpace
@@ -64,11 +65,7 @@ export function Layout() {
               {isAuthenticated ? (
                 <>
                   <Link to="/profile">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
                       <User className="w-4 h-4" />
                       View Profile
                     </Button>
@@ -86,9 +83,7 @@ export function Layout() {
               ) : (
                 <>
                   <Link to="/login">
-                    <Button variant="outline" size="sm">
-                      Sign In
-                    </Button>
+                    <Button variant="outline" size="sm">Sign In</Button>
                   </Link>
                   <Link to="/register">
                     <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
@@ -100,15 +95,8 @@ export function Layout() {
             </div>
 
             {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
+            <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
 
@@ -145,10 +133,7 @@ export function Layout() {
                       View Profile
                     </Link>
                     <button
-                      onClick={() => {
-                        logout();
-                        setMobileMenuOpen(false);
-                      }}
+                      onClick={() => { logout(); setMobileMenuOpen(false); }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50"
                     >
                       <LogOut className="w-4 h-4" />
@@ -179,12 +164,11 @@ export function Layout() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1">
         <Outlet />
       </main>
 
-      {/* Footer */}
+      {/* Footer - unchanged */}
       <footer className="bg-gradient-to-r from-gray-900 to-slate-900 text-white mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -193,9 +177,7 @@ export function Layout() {
                 <img src={logo} alt="EventSpace" className="w-10 h-10" />
                 <span className="font-bold text-lg">EventSpace</span>
               </div>
-              <p className="text-sm text-gray-400">
-                Making community spaces accessible for everyone.
-              </p>
+              <p className="text-sm text-gray-400">Making community spaces accessible for everyone.</p>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Quick Links</h3>
@@ -203,7 +185,6 @@ export function Layout() {
                 <li><Link to="/events" className="hover:text-white">Browse Events</Link></li>
                 <li><Link to="/facilities" className="hover:text-white">Browse Facilities</Link></li>
                 <li><Link to="/bookings" className="hover:text-white">My Bookings</Link></li>
-                <li><Link to="/about" className="hover:text-white">About Us</Link></li>
               </ul>
             </div>
             <div>
