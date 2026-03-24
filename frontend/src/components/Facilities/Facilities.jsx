@@ -1,9 +1,10 @@
+import { facilities } from '../../data/mockData.js';
+import { facilityLocations } from './facilityLocations.jsx';
 import { FacilitiesView } from './FacilitiesView.jsx';
 import { useFacilitiesState } from './useFacilitiesState.jsx';
 
 export function Facilities() {
   const {
-    facilities,
     searchTerm,
     setSearchTerm,
     filterType,
@@ -12,9 +13,7 @@ export function Facilities() {
     setViewMode,
     facilityTypes,
     filteredFacilities,
-    isLoading,
-    errorMessage,
-  } = useFacilitiesState();
+  } = useFacilitiesState({ facilities, facilityLocations });
 
   return (
     <FacilitiesView
@@ -27,8 +26,6 @@ export function Facilities() {
       onFilterTypeChange={setFilterType}
       viewMode={viewMode}
       onViewModeChange={setViewMode}
-      isLoading={isLoading}
-      errorMessage={errorMessage}
     />
   );
 }
