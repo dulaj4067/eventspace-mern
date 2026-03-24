@@ -1,9 +1,23 @@
-import { useState, createContext, useContext } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 
 const AuthContext = createContext(undefined);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (!token || !storedUser) return;
+
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+    } catch {
+      localStorage.removeItem('user');
+    }
+  }, []);
 
   const login = async (email, password) => {
     const res = await fetch('/api/users/login', {
@@ -19,6 +33,7 @@ export function AuthProvider({ children }) {
     }
 
     localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
   };
 
@@ -40,6 +55,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
