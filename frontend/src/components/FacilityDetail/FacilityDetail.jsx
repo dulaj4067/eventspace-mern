@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { facilities, timeSlots } from '../../data/mockData.js';
+import { timeSlots } from '../../data/mockData.js';
 import { ArrowLeft, Users, DollarSign, Check } from 'lucide-react';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
@@ -10,10 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge.jsx';
 import { toast } from 'sonner';
 
+const EXTERNAL_CENTERS_STORAGE_KEY = 'externalCommunityCenters';
+
 export function FacilityDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const facility = facilities.find((f) => f.id === id);
+  const [facility, setFacility] = useState(null);
+  const [isLoadingFacility, setIsLoadingFacility] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [resolvedAddress, setResolvedAddress] = useState('');
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [nearbyPlaces, setNearbyPlaces] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,7 +33,226 @@ export function FacilityDetail() {
 
   const [loading, setLoading] = useState(false);
 
-  if (!facility) {
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchFacility = async () => {
+      try {
+        setIsLoadingFacility(true);
+        setLoadError('');
+
+        if (id?.startsWith('community-')) {
+          const rawCenters = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
+          const centers = rawCenters ? JSON.parse(rawCenters) : [];
+          const externalFacility = centers.find((center) => center.id === id);
+          if (!externalFacility) {
+            throw new Error('Community center not found in current search area');
+          }
+          if (isMounted) {
+            setFacility(externalFacility);
+          }
+          return;
+        }
+
+        const response = await fetch(`/api/facilities/${id}`);
+        const payload = await response.json();
+
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || 'Failed to load facility details');
+        }
+
+        if (isMounted) {
+          setFacility(payload.data);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setLoadError(error.message || 'Failed to load facility details');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingFacility(false);
+        }
+      }
+    };
+
+    fetchFacility();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const address = [
+      facility?.location?.address?.street,
+      facility?.location?.address?.city,
+      facility?.location?.address?.state,
+      facility?.location?.address?.zipCode,
+      facility?.location?.address?.country,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    if (address) {
+      setResolvedAddress(address);
+      return undefined;
+    }
+
+    const lat = facility?.location?.coordinates?.latitude;
+    const lon = facility?.location?.coordinates?.longitude;
+    const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lon);
+
+    if (!hasCoordinates) {
+      setResolvedAddress('');
+      return undefined;
+    }
+
+    const resolveAddress = async () => {
+      try {
+        const response = await fetch('/api/location/reverse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude: lat, longitude: lon }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.success) return;
+        if (isMounted) {
+          setResolvedAddress(payload.data.address?.displayName || payload.data.address?.street || '');
+        }
+      } catch {
+        // Silently fail: address is optional
+      }
+    };
+
+    resolveAddress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [facility]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const lat = facility?.location?.coordinates?.latitude;
+    const lon = facility?.location?.coordinates?.longitude;
+    const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lon);
+
+    if (!hasCoordinates) {
+      setNearbyPlaces([]);
+      return undefined;
+    }
+
+    const fetchNearbyPlaces = async () => {
+      try {
+        const response = await fetch(
+          `/api/location/external-places?latitude=${lat}&longitude=${lon}&searchTerm=${encodeURIComponent(
+            'parking',
+          )}&radius=2500`,
+        );
+        const payload = await response.json();
+        if (!response.ok || !payload.success) return;
+        if (isMounted) {
+          setNearbyPlaces((payload.data || []).slice(0, 3));
+        }
+      } catch {
+        // Optional enhancement only
+      }
+    };
+
+    fetchNearbyPlaces();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [facility]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const endLat = facility?.location?.coordinates?.latitude;
+    const endLon = facility?.location?.coordinates?.longitude;
+    const hasDestination = Number.isFinite(endLat) && Number.isFinite(endLon);
+
+    if (!hasDestination || !navigator.geolocation) {
+      setRouteInfo(null);
+      return undefined;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const response = await fetch(
+            `/api/location/route?startLatitude=${position.coords.latitude}&startLongitude=${position.coords.longitude}&endLatitude=${endLat}&endLongitude=${endLon}`,
+          );
+          const payload = await response.json();
+          if (!response.ok || !payload.success) return;
+          if (isMounted) {
+            setRouteInfo(payload.data);
+          }
+        } catch {
+          // Optional enhancement only
+        }
+      },
+      () => {
+        if (isMounted) {
+          setRouteInfo(null);
+        }
+      },
+      { maximumAge: 120000, timeout: 5000 },
+    );
+
+    return () => {
+      isMounted = false;
+    };
+  }, [facility]);
+
+  const normalizedFacility = useMemo(() => {
+    if (!facility) return null;
+
+    const image =
+      facility.primaryImage ||
+      facility.images?.find((item) => item.isPrimary)?.url ||
+      facility.images?.[0]?.url ||
+      'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
+
+    return {
+      ...facility,
+      image,
+      amenities: [
+        ...(facility.amenities || []),
+        ...nearbyPlaces
+          .map((place) => place.type)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((type) => `Nearby ${type}`),
+      ],
+    };
+  }, [facility, nearbyPlaces]);
+
+  if (isLoadingFacility) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading facility details...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <h2 className="text-2xl mb-2">Unable to load facility</h2>
+          <p className="text-gray-600 mb-4">{loadError}</p>
+          <Link to="/facilities" className="text-blue-600 hover:underline">
+            Return to facilities
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!normalizedFacility) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -44,7 +270,7 @@ export function FacilityDetail() {
       const start = parseInt(formData.startTime.split(':')[0]);
       const end = parseInt(formData.endTime.split(':')[0]);
       const hours = end - start;
-      return hours > 0 ? hours * facility.hourlyRate : 0;
+      return hours > 0 ? hours * normalizedFacility.hourlyRate : 0;
     }
     return 0;
   };
@@ -89,33 +315,34 @@ export function FacilityDetail() {
           <div>
             <div className="bg-white rounded-lg overflow-hidden shadow-sm">
               <img
-                src={facility.image}
-                alt={facility.name}
+                src={normalizedFacility.image}
+                alt={normalizedFacility.name}
                 className="w-full h-64 lg:h-96 object-cover"
               />
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h1 className="text-3xl mb-2">{facility.name}</h1>
-                    <Badge className="text-sm">{facility.type}</Badge>
+                    <h1 className="text-3xl mb-2">{normalizedFacility.name}</h1>
+                    <Badge className="text-sm">{normalizedFacility.type}</Badge>
                   </div>
                 </div>
 
-                <p className="text-gray-600 mb-6">{facility.description}</p>
+                <p className="text-gray-600 mb-6">{normalizedFacility.description}</p>
+                {resolvedAddress && <p className="text-sm text-gray-500 mb-6">{resolvedAddress}</p>}
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="flex items-center gap-2 text-gray-700">
                     <Users className="w-5 h-5 text-purple-600" />
                     <div>
                       <div className="text-sm text-gray-500">Capacity</div>
-                      <div className="font-semibold">{facility.capacity} people</div>
+                      <div className="font-semibold">{normalizedFacility.capacity} people</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700">
                     <DollarSign className="w-5 h-5 text-purple-600" />
                     <div>
                       <div className="text-sm text-gray-500">Hourly Rate</div>
-                      <div className="font-semibold">${facility.hourlyRate}/hour</div>
+                      <div className="font-semibold">${normalizedFacility.hourlyRate}/hour</div>
                     </div>
                   </div>
                 </div>
@@ -123,7 +350,7 @@ export function FacilityDetail() {
                 <div className="mb-6">
                   <h3 className="text-lg mb-3">Amenities</h3>
                   <div className="flex flex-wrap gap-2">
-                    {facility.amenities.map((amenity) => (
+                    {normalizedFacility.amenities.map((amenity) => (
                       <div
                         key={amenity}
                         className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg text-sm"
@@ -266,8 +493,8 @@ export function FacilityDetail() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      Based on {calculateCost() / facility.hourlyRate} hour(s) at $
-                      {facility.hourlyRate}/hour
+                      Based on {normalizedFacility.hourlyRate > 0 ? calculateCost() / normalizedFacility.hourlyRate : 0} hour(s) at $
+                      {normalizedFacility.hourlyRate}/hour
                     </p>
                   </div>
                 )}
@@ -283,6 +510,7 @@ export function FacilityDetail() {
                 <p className="text-sm text-gray-500 text-center">
                   Your booking request will be reviewed by our team and you'll receive
                   a confirmation email within 24 hours.
+                  {routeInfo && ` Typical drive: ${routeInfo.duration} ${routeInfo.durationUnit}.`}
                 </p>
               </form>
             </div>

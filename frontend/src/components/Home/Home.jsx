@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, MapPin, Calendar, Users, Clock } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import logo from '../../assets/logo.png';
@@ -9,13 +10,112 @@ import { InteractiveTile } from './InteractiveTile.jsx';
 
 export function Home() {
   applyLeafletDefaultIcon();
+  const [mapLocations, setMapLocations] = useState([]);
+  const [mapLoading, setMapLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
+  const [scrollFade, setScrollFade] = useState(1);
 
-  const communityLocations = [
-    { id: 1, name: 'Main Community Center', position: [40.7128, -74.006], facilities: 5 },
-    { id: 2, name: 'North District Center', position: [40.7580, -73.9855], facilities: 3 },
-    { id: 3, name: 'East Community Hub', position: [40.7489, -73.9680], facilities: 4 },
-    { id: 4, name: 'West Side Center', position: [40.7357, -74.0134], facilities: 2 },
-  ];
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchMapLocations = async () => {
+      try {
+        setMapLoading(true);
+        const response = await fetch('/api/facilities?limit=100');
+        const payload = await response.json();
+        const dbFacilities = response.ok && payload.success ? payload.data || [] : [];
+
+        const normalizedDb = dbFacilities.map((facility) => {
+          const lat = facility.location?.coordinates?.latitude;
+          const lon = facility.location?.coordinates?.longitude;
+          return {
+            id: facility._id,
+            name: facility.name,
+            type: facility.type,
+            position:
+              Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : [40.7128, -74.006],
+          };
+        });
+
+        const externalRaw = localStorage.getItem('externalCommunityCenters');
+        const externalCenters = externalRaw ? JSON.parse(externalRaw) : [];
+        const normalizedExternal = externalCenters
+          .filter((center) => Array.isArray(center.coordinates) && center.coordinates.length === 2)
+          .map((center) => ({
+            id: center.id,
+            name: center.name,
+            type: center.type || 'Community Center',
+            position: center.coordinates,
+          }));
+
+        if (isMounted) {
+          setMapLocations([...normalizedDb, ...normalizedExternal]);
+        }
+      } catch {
+        if (isMounted) {
+          setMapLocations([]);
+        }
+      } finally {
+        if (isMounted) {
+          setMapLoading(false);
+        }
+      }
+    };
+
+    fetchMapLocations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        setUserLocation(null);
+      },
+      { maximumAge: 120000, timeout: 6000 },
+    );
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const heroHeight = window.innerHeight || 1;
+      const ratio = Math.min(window.scrollY / (heroHeight * 0.6), 1);
+      setScrollFade(1 - ratio);
+    };
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const sortedMapLocations = useMemo(() => {
+    if (!userLocation) return mapLocations;
+
+    const [userLat, userLon] = userLocation;
+    const toRadians = (value) => (value * Math.PI) / 180;
+    const distanceInKm = (position) => {
+      const [lat, lon] = position;
+      const earthRadiusKm = 6371;
+      const dLat = toRadians(lat - userLat);
+      const dLon = toRadians(lon - userLon);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(userLat)) * Math.cos(toRadians(lat)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    };
+
+    return [...mapLocations].sort((a, b) => distanceInKm(a.position) - distanceInKm(b.position));
+  }, [mapLocations, userLocation]);
+
+  const mapCenter = useMemo(() => {
+    return userLocation || sortedMapLocations[0]?.position || [40.7128, -74.006];
+  }, [sortedMapLocations, userLocation]);
 
   const stats = [
     { label: 'Active Events', value: '150+', icon: Calendar },
@@ -31,7 +131,7 @@ export function Home() {
         {/* Map Background */}
         <div className="absolute inset-0 z-0">
           <MapContainer
-            center={[40.7128, -74.006]}
+            center={mapCenter}
             zoom={12}
             style={{ height: '100%', width: '100%' }}
             className="z-0"
@@ -40,12 +140,12 @@ export function Home() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
-            {communityLocations.map((location) => (
+            {sortedMapLocations.map((location) => (
               <Marker key={location.id} position={location.position}>
                 <Popup>
                   <div className="text-center">
                     <h3 className="font-semibold mb-1">{location.name}</h3>
-                    <p className="text-sm text-gray-600">{location.facilities} facilities available</p>
+                    <p className="text-sm text-gray-600">{location.type}</p>
                     <Link to="/facilities" className="text-purple-600 text-sm hover:underline">
                       View Details →
                     </Link>
@@ -79,6 +179,7 @@ export function Home() {
               <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto">
                 Book community facilities, create events, and bring people together
               </p>
+              {mapLoading && <p className="text-white/80 mt-3">Loading live map locations...</p>}
             </motion.div>
 
             {/* Interactive Tiles */}
@@ -86,7 +187,8 @@ export function Home() {
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+              className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto transition-opacity duration-300"
+              style={{ opacity: scrollFade }}
             >
               <InteractiveTile
                 title="Create Event"
