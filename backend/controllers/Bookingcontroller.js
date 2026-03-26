@@ -99,23 +99,32 @@ const createBooking = async (req, res) => {
 
 
 // 2. GET BOOKINGS
+// ✅ FIXED: Now uses req.user from JWT middleware instead of relying on
+//    an optional ?userId= query param that anyone could omit or spoof.
+//    - Regular users only see their own bookings
+//    - Admins can see all bookings
 
 const getBookings = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const requestingUser = req.user; // injected by auth middleware from JWT
 
         let bookings;
-        if (userId) {
-            bookings = await Booking.find({ user: userId })
-                .populate('user')
-                .populate('facility');
-        } else {
+
+        if (requestingUser.role === 'admin') {
+            // Admins can see all bookings
             bookings = await Booking.find()
-                .populate('user')
-                .populate('facility');
+                .populate('user', 'name email')
+                .populate('facility', 'name location')
+                .sort({ createdAt: -1 });
+        } else {
+            // Regular users only see their own bookings
+            bookings = await Booking.find({ user: requestingUser.id })
+                .populate('facility', 'name location')
+                .sort({ createdAt: -1 });
         }
 
         res.status(200).json({ success: true, data: bookings });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
