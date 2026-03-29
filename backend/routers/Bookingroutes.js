@@ -14,6 +14,7 @@ const router = express.Router();
 const {
     createBooking,
     getBookings,
+    getMyBookings,          // ✅ newly added
     updateBookingStatus,
     cancelBooking,
     deleteBooking,
@@ -41,6 +42,13 @@ router.get(
     '/',
     verifyToken,
     getBookings
+);
+
+//✅ NEW — 3. GET MY BOOKINGS — always returns only the logged-in user's bookings
+router.get(
+    '/my',
+    verifyToken,
+    getMyBookings
 );
 
 

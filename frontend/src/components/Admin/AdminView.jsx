@@ -24,6 +24,8 @@ export function AdminView({
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* ── Page Header ── */}
       <div className="bg-gradient-to-r from-slate-800 via-purple-900 to-blue-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h1 className="text-4xl mb-2">Admin Dashboard</h1>
@@ -32,7 +34,10 @@ export function AdminView({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* ── Stats Cards ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -80,14 +85,17 @@ export function AdminView({
               </div>
             </CardContent>
           </Card>
+
         </div>
 
+        {/* ── Tabs: Bookings / Facilities ── */}
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="bookings">Manage Bookings</TabsTrigger>
             <TabsTrigger value="facilities">Facilities</TabsTrigger>
           </TabsList>
 
+          {/* ── Bookings Tab ── */}
           <TabsContent value="bookings" className="mt-6">
             <Card>
               <CardHeader>
@@ -96,41 +104,53 @@ export function AdminView({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {bookings.length === 0 && (
+                    <p className="text-gray-500 text-center py-8">No bookings found.</p>
+                  )}
+
                   {bookings.map((booking) => (
+                    // ✅ Use _id from MongoDB (not id)
                     <div
-                      key={booking.id}
+                      key={booking._id}
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-start gap-3 mb-3">
                             <div className="flex-1">
-                              <h3 className="text-lg mb-1">{booking.facilityName}</h3>
+                              {/* Facility name — populated from backend via .populate('facility') */}
+                              <h3 className="text-lg mb-1">
+                                {booking.facility?.name ?? 'Unknown Facility'}
+                              </h3>
                               <p className="text-sm text-gray-600 mb-2">{booking.purpose}</p>
                               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                 <span>📅 {new Date(booking.date).toLocaleDateString()}</span>
-                                <span>
-                                  🕒 {booking.startTime} - {booking.endTime}
-                                </span>
-                                <span>💵 ${booking.totalCost}</span>
+                                <span>🕒 {booking.startTime} - {booking.endTime}</span>
+                                {/* Total cost from pricing.total (real DB field) */}
+                                <span>💵 ${booking.pricing?.total ?? 0}</span>
                               </div>
                             </div>
                             <Badge className={getBookingStatusClassName(booking.status)}>
                               {getBookingStatusLabel(booking.status)}
                             </Badge>
                           </div>
+
+                          {/* User info — populated from backend via .populate('user') */}
                           <div className="text-sm">
                             <p className="text-gray-600">
-                              <strong>Booked by:</strong> {booking.userName} ({booking.userEmail})
+                              <strong>Booked by:</strong>{' '}
+                              {booking.user?.name ?? 'Unknown'} ({booking.user?.email ?? 'N/A'})
                             </p>
                           </div>
                         </div>
 
+                        {/* Approve / Reject buttons — only show for pending bookings */}
                         {booking.status === 'pending' && (
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => onApproveBooking(booking.id)}
+                              // ✅ Fixed: pass _id instead of id
+                              onClick={() => onApproveBooking(booking._id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
@@ -139,7 +159,8 @@ export function AdminView({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onRejectBooking(booking.id)}
+                              // ✅ Fixed: pass _id instead of id
+                              onClick={() => onRejectBooking(booking._id)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <XCircle className="w-4 h-4 mr-1" />
@@ -155,6 +176,7 @@ export function AdminView({
             </Card>
           </TabsContent>
 
+          {/* ── Facilities Tab ── */}
           <TabsContent value="facilities" className="mt-6">
             <Card>
               <CardHeader>
@@ -168,12 +190,18 @@ export function AdminView({
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {facilities.length === 0 && (
+                    <p className="text-gray-500 text-center py-8 col-span-2">No facilities found.</p>
+                  )}
+
                   {facilities.map((facility) => {
-                    const facilityBookings = confirmedBookingsByFacilityId.get(facility.id) ?? 0;
+                    // ✅ Fixed: use _id to match confirmed bookings map from real DB data
+                    const facilityBookings =
+                      confirmedBookingsByFacilityId.get(facility._id) ?? 0;
 
                     return (
                       <div
-                        key={facility.id}
+                        key={facility._id}
                         className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex gap-4">
@@ -198,7 +226,7 @@ export function AdminView({
                               </div>
                               <div className="flex items-center gap-2">
                                 <TrendingUp className="w-4 h-4" />
-                                <span>{facilityBookings} bookings</span>
+                                <span>{facilityBookings} confirmed bookings</span>
                               </div>
                             </div>
                           </div>
@@ -218,9 +246,9 @@ export function AdminView({
               </CardContent>
             </Card>
           </TabsContent>
+
         </Tabs>
       </div>
     </div>
   );
 }
-

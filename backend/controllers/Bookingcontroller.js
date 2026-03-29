@@ -3,6 +3,7 @@
 // This controller handles all booking-related operations:
 // - Create bookings
 // - Get bookings (all or per user)
+// - Get my bookings (always returns only logged-in user's bookings)
 // - Update bookings
 // - Cancel bookings
 // - Admin approval/rejection
@@ -12,6 +13,7 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Facility = require('../models/Facilities');
 const { getCalendarBookings, pushToGoogleCalendar } = require('../services/BookingCalendar');
+
 
 // 1. CREATE BOOKING
 
@@ -29,7 +31,7 @@ const createBooking = async (req, res) => {
             specialRequests
         } = req.body;
 
-        //   use authenticated user from JWT
+        // Use authenticated user from JWT
         const user = req.user.id;
 
         // Check if facility is already booked for this date/time
@@ -38,7 +40,7 @@ const createBooking = async (req, res) => {
             date: new Date(date),
             status: { $in: ['pending', 'confirmed'] },
             $or: [
-                { 
+                {
                     startTime: { $lt: endTime },
                     endTime: { $gt: startTime }
                 }
@@ -52,7 +54,7 @@ const createBooking = async (req, res) => {
             });
         }
 
-        //  Validate facility working hours
+        // Validate facility working hours
         const facilityData = await Facility.findById(facility);
         if (!facilityData) {
             return res.status(404).json({ success: false, message: 'Facility not found' });
@@ -99,10 +101,11 @@ const createBooking = async (req, res) => {
 
 
 // 2. GET BOOKINGS
-// ✅ FIXED: Now uses req.user from JWT middleware instead of relying on
-//    an optional ?userId= query param that anyone could omit or spoof.
-//    - Regular users only see their own bookings
-//    - Admins can see all bookings
+// - Regular users only see their own bookings
+// - Admins can see all bookings
+// ⚠️  Do NOT use this endpoint for "My Bookings" page
+//     because admins will get all bookings instead of their own.
+//     Use getMyBookings (endpoint: GET /api/bookings/my) instead.
 
 const getBookings = async (req, res) => {
     try {
@@ -111,7 +114,7 @@ const getBookings = async (req, res) => {
         let bookings;
 
         if (requestingUser.role === 'admin') {
-            // Admins can see all bookings
+            // Admins see all bookings — used for Admin Dashboard
             bookings = await Booking.find()
                 .populate('user', 'name email')
                 .populate('facility', 'name location')
@@ -131,14 +134,34 @@ const getBookings = async (req, res) => {
 };
 
 
-// 3. UPDATE BOOKING STATUS
+// ✅ NEW — 3. GET MY BOOKINGS
+// Always returns only the logged-in user's own bookings regardless of role.
+// Used for the "My Bookings" page so admins also see only their own bookings.
+// Endpoint: GET /api/bookings/my
+
+const getMyBookings = async (req, res) => {
+    try {
+        // Always filter by the logged-in user's ID — role does not matter here
+        const bookings = await Booking.find({ user: req.user.id })
+            .populate('facility', 'name location')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({ success: true, data: bookings });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+// 4. UPDATE BOOKING STATUS
 
 const updateBookingStatus = async (req, res) => {
     try {
         const { bookingId } = req.params;
         const { status, reason } = req.body;
 
-        //  Use authenticated admin ID for status change tracking
+        // Use authenticated admin ID for status change tracking
         const changedBy = req.user.id;
 
         const booking = await Booking.findById(bookingId);
@@ -172,7 +195,7 @@ const updateBookingStatus = async (req, res) => {
 };
 
 
-// 4. CANCEL BOOKING
+// 5. CANCEL BOOKING
 
 const cancelBooking = async (req, res) => {
     try {
@@ -182,7 +205,7 @@ const cancelBooking = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        //  Ownership check (user must own booking or be admin)
+        // Ownership check (user must own booking or be admin)
         if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({
                 success: false,
@@ -199,7 +222,7 @@ const cancelBooking = async (req, res) => {
             });
         }
 
-        //  Use authenticated user as canceller
+        // Use authenticated user as canceller
         const cancelledBy = req.user.id;
 
         booking.cancellation = {
@@ -227,7 +250,7 @@ const cancelBooking = async (req, res) => {
 };
 
 
-// 5. DELETE BOOKING (Admin only)
+// 6. DELETE BOOKING (Admin only)
 
 const deleteBooking = async (req, res) => {
     try {
@@ -248,7 +271,7 @@ const deleteBooking = async (req, res) => {
 };
 
 
-// 6. GET BOOKING CALENDAR
+// 7. GET BOOKING CALENDAR
 
 const getBookingCalendar = async (req, res) => {
     try {
@@ -260,13 +283,13 @@ const getBookingCalendar = async (req, res) => {
 };
 
 
-// Helper Functions
+// ── Helper Functions ──────────────────────────────────────────────────────────
 
 const calculateDuration = (startTime, endTime) => {
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
 
-    return (endH + endM/60) - (startH + startM/60);
+    return (endH + endM / 60) - (startH + startM / 60);
 };
 
 const calculateRefund = (booking) => {
@@ -274,10 +297,11 @@ const calculateRefund = (booking) => {
 };
 
 
-// EXPORTS
+// ── EXPORTS ───────────────────────────────────────────────────────────────────
 module.exports = {
     createBooking,
     getBookings,
+    getMyBookings,      // ✅ newly added
     updateBookingStatus,
     cancelBooking,
     deleteBooking,

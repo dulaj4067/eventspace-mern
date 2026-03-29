@@ -11,7 +11,7 @@ export function useBookingsState() {
     const fetchBookings = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/bookings', {
+       const response = await fetch('/api/bookings/my', { //fix to get only user own bookings
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
