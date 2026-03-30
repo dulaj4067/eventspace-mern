@@ -1,10 +1,33 @@
-import { mockBookings, facilities } from '../../data/mockData.js';
 import { AdminView } from './AdminView.jsx';
 import { useAdminDashboardState } from './useAdminDashboardState.jsx';
 
 export function Admin() {
-  const { bookings, stats, approveBooking, rejectBooking, confirmedBookingsByFacilityId } =
-    useAdminDashboardState({ initialBookings: mockBookings, facilities });
+  const {
+    bookings,
+    facilities,
+    stats,
+    loading,
+    error,
+    approveBooking,
+    rejectBooking,
+    confirmedBookingsByFacilityId,
+  } = useAdminDashboardState(); // ✅ No more mock data — fetches from real backend
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-500 text-lg">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-red-500 text-lg">Error: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <AdminView
