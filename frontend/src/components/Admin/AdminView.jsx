@@ -1,8 +1,5 @@
 import {
-  Building2,
-  Calendar,
   CheckCircle,
-  Clock,
   DollarSign,
   TrendingUp,
   Users,
@@ -13,15 +10,19 @@ import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs.jsx';
 import { getBookingStatusClassName, getBookingStatusLabel } from '../common/bookingStatus.jsx';
+import { AdminPaymentsTab } from './AdminPaymentsTab.jsx';
+import { useAdminPaymentsState } from './useAdminPaymentsState.jsx';
+import { RevenueTrackingTab } from './RevenueTrackingTab.jsx';
 
 export function AdminView({
   bookings,
   facilities,
-  stats,
   onApproveBooking,
   onRejectBooking,
   confirmedBookingsByFacilityId,
 }) {
+  const { payments, loading, updateStatus, processPayment, deletePayment } = useAdminPaymentsState();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-slate-800 via-purple-900 to-blue-900 text-white">
@@ -32,62 +33,15 @@ export function AdminView({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Facilities</p>
-                  <p className="text-3xl">{stats.totalFacilities}</p>
-                </div>
-                <Building2 className="w-12 h-12 text-blue-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Bookings</p>
-                  <p className="text-3xl">{stats.totalBookings}</p>
-                </div>
-                <Calendar className="w-12 h-12 text-green-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Pending Approval</p>
-                  <p className="text-3xl text-yellow-600">{stats.pendingBookings}</p>
-                </div>
-                <Clock className="w-12 h-12 text-yellow-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                  <p className="text-3xl text-green-600">${stats.revenue}</p>
-                </div>
-                <DollarSign className="w-12 h-12 text-green-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <Tabs defaultValue="bookings" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="bookings">Manage Bookings</TabsTrigger>
             <TabsTrigger value="facilities">Facilities</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="revenue">Revenue Tracking</TabsTrigger>
           </TabsList>
 
+          {/* Bookings Tab */}
           <TabsContent value="bookings" className="mt-6">
             <Card>
               <CardHeader>
@@ -109,9 +63,7 @@ export function AdminView({
                               <p className="text-sm text-gray-600 mb-2">{booking.purpose}</p>
                               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                 <span>📅 {new Date(booking.date).toLocaleDateString()}</span>
-                                <span>
-                                  🕒 {booking.startTime} - {booking.endTime}
-                                </span>
+                                <span>🕒 {booking.startTime} - {booking.endTime}</span>
                                 <span>💵 ${booking.totalCost}</span>
                               </div>
                             </div>
@@ -155,6 +107,7 @@ export function AdminView({
             </Card>
           </TabsContent>
 
+          {/* Facilities Tab */}
           <TabsContent value="facilities" className="mt-6">
             <Card>
               <CardHeader>
@@ -204,12 +157,8 @@ export function AdminView({
                           </div>
                         </div>
                         <div className="mt-4 flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            View Details
-                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1">Edit</Button>
+                          <Button variant="outline" size="sm" className="flex-1">View Details</Button>
                         </div>
                       </div>
                     );
@@ -218,9 +167,24 @@ export function AdminView({
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments" className="mt-6">
+            <AdminPaymentsTab
+              payments={payments}
+              loading={loading}
+              onProcess={processPayment}
+              onDelete={deletePayment}
+              onUpdateStatus={updateStatus}
+            />
+          </TabsContent>
+
+          {/* Revenue Tracking Tab */}
+          <TabsContent value="revenue" className="mt-6">
+            <RevenueTrackingTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 }
-
