@@ -12,6 +12,8 @@ import { CreateEvent } from './components/CreateEvent/CreateEvent.jsx';
 import { PaymentPage } from './components/PaymentPage/PaymentPage.jsx';
 import { NotFound } from './components/NotFound/NotFound.jsx';
 import { Profile } from './components/Profile/Profile.jsx';
+// ✅ NEW — import the calendar page
+import { BookingCalendar } from './components/Booking-calender/BookingCalendar.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -53,6 +55,11 @@ export const router = createBrowserRouter([
       {
         path: 'bookings',
         Component: Bookings,
+      },
+      // ✅ NEW — calendar route, any logged-in user can access
+      {
+        path: 'calendar',
+        Component: BookingCalendar,
       },
       {
         path: 'profile',
