@@ -8,16 +8,15 @@ import logo from '../../assets/logo.png';
 export function Layout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { logout, isAuthenticated, isAdmin } = useAuth(); // 👈 pull isAdmin
+  const { logout, isAuthenticated, isAdmin } = useAuth();
 
   const navItems = [
     { path: '/home', label: 'Home', icon: Home },
     { path: '/events', label: 'Events', icon: CalendarDays },
+    { path: '/my-events', label: 'My Events', icon: Calendar },
     { path: '/facilities', label: 'Facilities', icon: Calendar },
     { path: '/bookings', label: 'My Bookings', icon: Calendar },
-    // ✅ NEW — Booking Calendar tab visible to all logged-in users
-    { path: '/calendar',  label: 'Booking Calendar', icon: CalendarDays },
-    // 👇 Admin tab only included if user is admin
+    { path: '/calendar', label: 'Booking Calendar', icon: CalendarDays },
     ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Settings }] : []),
   ];
 
@@ -34,7 +33,7 @@ export function Layout() {
       <header className="bg-white/95 backdrop-blur-sm border-b sticky top-0 z-[5000] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/home" className="flex items-center gap-3"> {/* 👈 logo links to /home */}
+            <Link to="/home" className="flex items-center gap-3">
               <img src={logo} alt="EventSpace" className="w-10 h-10" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 EventSpace
@@ -170,7 +169,6 @@ export function Layout() {
         <Outlet />
       </main>
 
-      {/* Footer - unchanged */}
       <footer className="bg-gradient-to-r from-gray-900 to-slate-900 text-white mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -185,6 +183,7 @@ export function Layout() {
               <h3 className="font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link to="/events" className="hover:text-white">Browse Events</Link></li>
+                <li><Link to="/my-events" className="hover:text-white">My Events</Link></li>
                 <li><Link to="/facilities" className="hover:text-white">Browse Facilities</Link></li>
                 <li><Link to="/bookings" className="hover:text-white">My Bookings</Link></li>
               </ul>
