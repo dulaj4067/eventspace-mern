@@ -11,6 +11,7 @@ export function BookingsView({
   onFilterStatusChange,
   stats,
   onCancelBooking,
+  isLoading,
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -60,11 +61,19 @@ export function BookingsView({
               <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="no-show">No Show</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {filteredBookings.length === 0 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-gray-600">Loading your bookings...</p>
+            </CardContent>
+          </Card>
+        ) : filteredBookings.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -79,11 +88,14 @@ export function BookingsView({
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => (
-              <Card key={booking.id}>
+              <Card key={booking._id}>
                 <CardHeader className="pb-3">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
-                      <h3 className="text-xl mb-1">{booking.facilityName}</h3>
+                      {/* ✅ Fixed: facility name from populated object */}
+                      <h3 className="text-xl mb-1">
+                        {booking.facility?.name || 'Facility'}
+                      </h3>
                       <p className="text-sm text-gray-600">{booking.purpose}</p>
                     </div>
                     <Badge className={getBookingStatusClassName(booking.status)}>
@@ -106,25 +118,28 @@ export function BookingsView({
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Clock className="w-4 h-4" />
-                      <span>
-                        {booking.startTime} - {booking.endTime}
-                      </span>
+                      <span>{booking.startTime} - {booking.endTime}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <DollarSign className="w-4 h-4" />
-                      <span>${booking.totalCost}</span>
+                      {/* ✅ Fixed: pricing.total instead of totalCost */}
+                      <span>${booking.pricing?.total}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
-                      <span>Community Center</span>
+                      <span>
+                        {booking.facility?.location?.address?.city || 'Community Center'}
+                      </span>
                     </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2">
+                    {/* ✅ Fixed: onClick added for pending cancel */}
                     {booking.status === 'pending' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => onCancelBooking(booking._id)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <X className="w-4 h-4 mr-1" />
@@ -139,7 +154,7 @@ export function BookingsView({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onCancelBooking(booking.id)}
+                          onClick={() => onCancelBooking(booking._id)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <X className="w-4 h-4 mr-1" />
@@ -157,4 +172,3 @@ export function BookingsView({
     </div>
   );
 }
-

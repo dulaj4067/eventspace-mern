@@ -1,8 +1,5 @@
 import {
-  Building2,
-  Calendar,
   CheckCircle,
-  Clock,
   DollarSign,
   TrendingUp,
   Users,
@@ -13,17 +10,23 @@ import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs.jsx';
 import { getBookingStatusClassName, getBookingStatusLabel } from '../common/bookingStatus.jsx';
+import { AdminPaymentsTab } from './AdminPaymentsTab.jsx';
+import { useAdminPaymentsState } from './useAdminPaymentsState.jsx';
+import { RevenueTrackingTab } from './RevenueTrackingTab.jsx';
 
 export function AdminView({
   bookings,
   facilities,
-  stats,
   onApproveBooking,
   onRejectBooking,
   confirmedBookingsByFacilityId,
 }) {
+  const { payments, loading, updateStatus, processPayment, deletePayment } = useAdminPaymentsState();
+
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* Page Header */}
       <div className="bg-gradient-to-r from-slate-800 via-purple-900 to-blue-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h1 className="text-4xl mb-2">Admin Dashboard</h1>
@@ -32,62 +35,15 @@ export function AdminView({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Facilities</p>
-                  <p className="text-3xl">{stats.totalFacilities}</p>
-                </div>
-                <Building2 className="w-12 h-12 text-blue-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Bookings</p>
-                  <p className="text-3xl">{stats.totalBookings}</p>
-                </div>
-                <Calendar className="w-12 h-12 text-green-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Pending Approval</p>
-                  <p className="text-3xl text-yellow-600">{stats.pendingBookings}</p>
-                </div>
-                <Clock className="w-12 h-12 text-yellow-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                  <p className="text-3xl text-green-600">${stats.revenue}</p>
-                </div>
-                <DollarSign className="w-12 h-12 text-green-600 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <Tabs defaultValue="bookings" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="bookings">Manage Bookings</TabsTrigger>
             <TabsTrigger value="facilities">Facilities</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="revenue">Revenue Tracking</TabsTrigger>
           </TabsList>
 
+          {/* Bookings Tab */}
           <TabsContent value="bookings" className="mt-6">
             <Card>
               <CardHeader>
@@ -96,32 +52,38 @@ export function AdminView({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {bookings.length === 0 && (
+                    <p className="text-gray-500 text-center py-8">No bookings found.</p>
+                  )}
+
                   {bookings.map((booking) => (
                     <div
-                      key={booking.id}
+                      key={booking._id}
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-start gap-3 mb-3">
                             <div className="flex-1">
-                              <h3 className="text-lg mb-1">{booking.facilityName}</h3>
+                              <h3 className="text-lg mb-1">
+                                {booking.facility?.name ?? 'Unknown Facility'}
+                              </h3>
                               <p className="text-sm text-gray-600 mb-2">{booking.purpose}</p>
                               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                 <span>📅 {new Date(booking.date).toLocaleDateString()}</span>
-                                <span>
-                                  🕒 {booking.startTime} - {booking.endTime}
-                                </span>
-                                <span>💵 ${booking.totalCost}</span>
+                                <span>🕒 {booking.startTime} - {booking.endTime}</span>
+                                <span>💵 ${booking.pricing?.total ?? 0}</span>
                               </div>
                             </div>
                             <Badge className={getBookingStatusClassName(booking.status)}>
                               {getBookingStatusLabel(booking.status)}
                             </Badge>
                           </div>
+
                           <div className="text-sm">
                             <p className="text-gray-600">
-                              <strong>Booked by:</strong> {booking.userName} ({booking.userEmail})
+                              <strong>Booked by:</strong>{' '}
+                              {booking.user?.name ?? 'Unknown'} ({booking.user?.email ?? 'N/A'})
                             </p>
                           </div>
                         </div>
@@ -130,7 +92,7 @@ export function AdminView({
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => onApproveBooking(booking.id)}
+                              onClick={() => onApproveBooking(booking._id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
@@ -139,7 +101,7 @@ export function AdminView({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onRejectBooking(booking.id)}
+                              onClick={() => onRejectBooking(booking._id)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <XCircle className="w-4 h-4 mr-1" />
@@ -155,6 +117,7 @@ export function AdminView({
             </Card>
           </TabsContent>
 
+          {/* Facilities Tab */}
           <TabsContent value="facilities" className="mt-6">
             <Card>
               <CardHeader>
@@ -168,12 +131,17 @@ export function AdminView({
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {facilities.length === 0 && (
+                    <p className="text-gray-500 text-center py-8 col-span-2">No facilities found.</p>
+                  )}
+
                   {facilities.map((facility) => {
-                    const facilityBookings = confirmedBookingsByFacilityId.get(facility.id) ?? 0;
+                    const facilityBookings =
+                      confirmedBookingsByFacilityId.get(facility._id) ?? 0;
 
                     return (
                       <div
-                        key={facility.id}
+                        key={facility._id}
                         className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex gap-4">
@@ -198,18 +166,14 @@ export function AdminView({
                               </div>
                               <div className="flex items-center gap-2">
                                 <TrendingUp className="w-4 h-4" />
-                                <span>{facilityBookings} bookings</span>
+                                <span>{facilityBookings} confirmed bookings</span>
                               </div>
                             </div>
                           </div>
                         </div>
                         <div className="mt-4 flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            View Details
-                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1">Edit</Button>
+                          <Button variant="outline" size="sm" className="flex-1">View Details</Button>
                         </div>
                       </div>
                     );
@@ -218,9 +182,25 @@ export function AdminView({
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments" className="mt-6">
+            <AdminPaymentsTab
+              payments={payments}
+              loading={loading}
+              onProcess={processPayment}
+              onDelete={deletePayment}
+              onUpdateStatus={updateStatus}
+            />
+          </TabsContent>
+
+          {/* Revenue Tracking Tab */}
+          <TabsContent value="revenue" className="mt-6">
+            <RevenueTrackingTab />
+          </TabsContent>
+
         </Tabs>
       </div>
     </div>
   );
 }
-

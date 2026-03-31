@@ -28,7 +28,8 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white/95 backdrop-blur-sm border-b sticky top-0 z-50 shadow-sm">
+      {/* Header */}
+      <header className="bg-white/95 backdrop-blur-sm border-b sticky top-0 z-[5000] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/home" className="flex items-center gap-3">

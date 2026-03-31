@@ -6,7 +6,7 @@ import { Label } from '../ui/label.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
-import { Calendar, Clock, Users, MapPin, Tag } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Tag, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { createEvent } from '../../services/eventService';
 import axios from 'axios';
@@ -25,6 +25,9 @@ export function CreateEvent() {
     startTime: '',
     endTime: '',
     expectedAttendees: '',
+    isFree: true,
+    price: '',
+    currency: 'USD',
   });
 
   const eventTypes = ['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'];
@@ -50,6 +53,11 @@ export function CreateEvent() {
       return;
     }
 
+    if (!formData.isFree && (!formData.price || parseFloat(formData.price) <= 0)) {
+      toast.error('Please enter a valid ticket price');
+      return;
+    }
+
     try {
       setLoading(true);
       await createEvent({
@@ -65,11 +73,16 @@ export function CreateEvent() {
         attendance: {
           maxAttendees: parseInt(formData.expectedAttendees) || 50,
         },
+        pricing: {
+          isFree: formData.isFree,
+          price: formData.isFree ? 0 : parseFloat(formData.price),
+          currency: formData.currency,
+        },
       });
 
       toast.success('Event created successfully!');
       setTimeout(() => {
-        navigate('/events');
+        navigate('/my-events');
       }, 1500);
 
     } catch (err) {
@@ -104,6 +117,8 @@ export function CreateEvent() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+
+              {/* Event Name */}
               <div>
                 <Label htmlFor="eventName">Event Name *</Label>
                 <div className="relative">
@@ -120,6 +135,7 @@ export function CreateEvent() {
                 </div>
               </div>
 
+              {/* Event Type */}
               <div>
                 <Label htmlFor="eventType">Event Type</Label>
                 <Select
@@ -139,6 +155,7 @@ export function CreateEvent() {
                 </Select>
               </div>
 
+              {/* Description */}
               <div>
                 <Label htmlFor="description">Event Description</Label>
                 <Textarea
@@ -150,6 +167,7 @@ export function CreateEvent() {
                 />
               </div>
 
+              {/* Facility */}
               <div>
                 <Label htmlFor="facility">Select Facility *</Label>
                 <div className="relative">
@@ -172,6 +190,7 @@ export function CreateEvent() {
                 </div>
               </div>
 
+              {/* Date and Time */}
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="date">Event Date *</Label>
@@ -218,6 +237,7 @@ export function CreateEvent() {
                 </div>
               </div>
 
+              {/* Expected Attendees */}
               <div>
                 <Label htmlFor="expectedAttendees">Expected Number of Attendees</Label>
                 <div className="relative">
@@ -234,6 +254,89 @@ export function CreateEvent() {
                 </div>
               </div>
 
+              {/* Pricing Section */}
+              <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                <Label className="text-lg font-semibold">Ticket Pricing</Label>
+
+                {/* Free or Paid toggle */}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isFree: true, price: '' })}
+                    className={`flex-1 py-3 rounded-lg font-semibold border-2 transition-colors ${
+                      formData.isFree
+                        ? 'bg-green-500 text-white border-green-500'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+                    }`}
+                  >
+                    🎟️ Free Event
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isFree: false })}
+                    className={`flex-1 py-3 rounded-lg font-semibold border-2 transition-colors ${
+                      !formData.isFree
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400'
+                    }`}
+                  >
+                    💰 Paid Event
+                  </button>
+                </div>
+
+                {/* Price input - only show if paid */}
+                {!formData.isFree && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="price">Ticket Price *</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          id="price"
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          placeholder="0.00"
+                          className="pl-10"
+                          min="0.01"
+                          step="0.01"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="currency">Currency</Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD - US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                          <SelectItem value="LKR">LKR - Sri Lankan Rupee</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing summary */}
+                <div className={`p-3 rounded-lg text-sm font-medium ${
+                  formData.isFree
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-purple-100 text-purple-800'
+                }`}>
+                  {formData.isFree
+                    ? '✅ This event is free — no payment required for registration'
+                    : `💳 Attendees will be charged ${formData.price || '0'} ${formData.currency} to register`}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
               <div className="flex gap-4 pt-4">
                 <Button
                   type="button"

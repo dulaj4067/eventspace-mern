@@ -1,11 +1,20 @@
 import { Link } from 'react-router';
+import { useEffect, useMemo, useState } from 'react';
 import { DollarSign, Search, Users } from 'lucide-react';
+import L from 'leaflet';
 import { Input } from '../ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Badge } from '../ui/badge.jsx';
 import { Card, CardContent, CardFooter } from '../ui/card.jsx';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 export function FacilitiesView({
   facilities,
@@ -17,7 +26,71 @@ export function FacilitiesView({
   onFilterTypeChange,
   viewMode,
   onViewModeChange,
+  isLoading,
+  errorMessage,
 }) {
+  const [userLocation, setUserLocation] = useState(null);
+  const mapCenter =
+    userLocation ||
+    filteredFacilities.find((facility) => Array.isArray(facility.coordinates))?.coordinates ||
+    [40.7128, -74.006];
+  const ITEMS_PER_PAGE = 9;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        setUserLocation(null);
+      },
+      { maximumAge: 120000, timeout: 6000 },
+    );
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, viewMode]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFacilities.length / ITEMS_PER_PAGE));
+  const paginatedFacilities = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return filteredFacilities.slice(start, end);
+  }, [filteredFacilities, currentPage]);
+
+  const mapFacilities = useMemo(() => {
+    if (!userLocation) return filteredFacilities;
+
+    const toRadians = (value) => (value * Math.PI) / 180;
+    const [userLat, userLon] = userLocation;
+
+    const distanceInKm = (facility) => {
+      const [lat, lon] = facility.coordinates || [];
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return Number.MAX_SAFE_INTEGER;
+      const earthRadiusKm = 6371;
+      const dLat = toRadians(lat - userLat);
+      const dLon = toRadians(lon - userLon);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(userLat)) *
+          Math.cos(toRadians(lat)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    };
+
+    return [...filteredFacilities].sort((a, b) => distanceInKm(a) - distanceInKm(b));
+  }, [filteredFacilities, userLocation]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
@@ -31,8 +104,8 @@ export function FacilitiesView({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-8 relative z-20">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -48,7 +121,7 @@ export function FacilitiesView({
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[2500]">
                 {facilityTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type === 'all' ? 'All Types' : type}
@@ -73,11 +146,25 @@ export function FacilitiesView({
           </div>
         </div>
 
+        {isLoading && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+            <p className="text-gray-600">Loading facilities...</p>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+            <p className="text-red-700">{errorMessage}</p>
+          </div>
+        )}
+
+        {!isLoading && !errorMessage && (
+          <>
         {viewMode === 'map' ? (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
-            <div className="h-[600px]">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8 relative z-0">
+            <div className="h-[600px] relative z-0">
               <MapContainer
-                center={[40.7128, -74.006]}
+                center={mapCenter}
                 zoom={12}
                 style={{ height: '100%', width: '100%' }}
               >
@@ -85,7 +172,7 @@ export function FacilitiesView({
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 />
-                {filteredFacilities.map((facility) => (
+                {mapFacilities.map((facility) => (
                   <Marker key={facility.id} position={facility.coordinates}>
                     <Popup>
                       <div className="p-2">
@@ -107,22 +194,22 @@ export function FacilitiesView({
           <>
             <div className="mb-4">
               <p className="text-gray-600">
-                Showing {filteredFacilities.length} of {facilities.length} facilities
+                Showing {Math.min(filteredFacilities.length, ITEMS_PER_PAGE)} of {filteredFacilities.length} facilities
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredFacilities.map((facility) => (
-                <Card key={facility.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              {paginatedFacilities.map((facility) => (
+                <Card key={facility.id} className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
                   <div className="relative h-48">
                     <img src={facility.image} alt={facility.name} className="w-full h-full object-cover" />
                     <Badge className="absolute top-3 right-3 bg-white text-gray-900">
                       {facility.type}
                     </Badge>
                   </div>
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 flex-1">
                     <h3 className="text-xl mb-2">{facility.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{facility.description}</p>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-3 min-h-[60px]">{facility.description}</p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Users className="w-4 h-4" />
@@ -157,6 +244,26 @@ export function FacilitiesView({
                 </Card>
               ))}
             </div>
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const page = index + 1;
+                  const isActive = page === currentPage;
+                  return (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-9 h-9 rounded-md text-sm ${
+                        isActive ? 'bg-purple-600 text-white' : 'bg-white border border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 
@@ -164,6 +271,8 @@ export function FacilitiesView({
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No facilities found matching your criteria.</p>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

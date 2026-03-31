@@ -12,7 +12,7 @@ const {
     processStripePayment,
     getPaymentLogs,
     deletePayment
-} = require("../controllers/paymentController");
+} = require("../controllers/PaymentController");
 const { verifyToken, isAdmin } = require("../middleware/Authmiddleware");
 
 // Admin routes (must be first to avoid conflicts)
