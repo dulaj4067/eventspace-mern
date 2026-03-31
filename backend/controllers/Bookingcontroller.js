@@ -103,6 +103,9 @@ const createBooking = async (req, res) => {
 // 2. GET BOOKINGS
 // - Regular users only see their own bookings
 // - Admins can see all bookings
+// ✅ FIXED: Admin can now filter bookings by status using ?status= query param
+//           Example: GET /api/bookings?status=pending
+//           If no ?status= is provided, all bookings are returned (no change in behaviour)
 // ⚠️  Do NOT use this endpoint for "My Bookings" page
 //     because admins will get all bookings instead of their own.
 //     Use getMyBookings (endpoint: GET /api/bookings/my) instead.
@@ -114,13 +117,27 @@ const getBookings = async (req, res) => {
         let bookings;
 
         if (requestingUser.role === 'admin') {
-            // Admins see all bookings — used for Admin Dashboard
-            bookings = await Booking.find()
+
+            // ✅ FIXED: Build a filter object instead of calling Booking.find() with no filter
+            // This allows optional status filtering via ?status= query param
+            const filter = {};
+
+            // ✅ FIXED: If ?status= query param exists and is a valid status value, add it to filter
+            // Whitelist check prevents invalid/malicious values reaching the database
+            const allowedStatuses = ['pending', 'confirmed', 'cancelled', 'completed', 'no-show'];
+            if (req.query.status && allowedStatuses.includes(req.query.status)) {
+                filter.status = req.query.status;
+            }
+            // If no ?status= param provided, filter stays {} → returns all bookings (original behaviour)
+
+            // Admins see all bookings (or filtered by status) — used for Admin Dashboard
+            bookings = await Booking.find(filter)
                 .populate('user', 'name email')
                 .populate('facility', 'name location')
                 .sort({ createdAt: -1 });
+
         } else {
-            // Regular users only see their own bookings
+            // Regular users only see their own bookings (status filter does not apply here)
             bookings = await Booking.find({ user: requestingUser.id })
                 .populate('facility', 'name location')
                 .sort({ createdAt: -1 });

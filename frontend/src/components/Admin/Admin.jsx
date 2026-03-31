@@ -11,7 +11,9 @@ export function Admin() {
     approveBooking,
     rejectBooking,
     confirmedBookingsByFacilityId,
-  } = useAdminDashboardState(); // ✅ No more mock data — fetches from real backend
+    statusFilter,        // ✅
+    setStatusFilter,     // ✅
+  } = useAdminDashboardState();
 
   if (loading) {
     return (
@@ -37,6 +39,8 @@ export function Admin() {
       onApproveBooking={approveBooking}
       onRejectBooking={rejectBooking}
       confirmedBookingsByFacilityId={confirmedBookingsByFacilityId}
+      statusFilter={statusFilter}            // ✅
+      onStatusFilterChange={setStatusFilter} // ✅
     />
   );
 }
