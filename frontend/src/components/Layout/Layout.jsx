@@ -16,6 +16,12 @@ export function Layout() {
     { path: '/my-events', label: 'My Events', icon: Calendar },
     { path: '/facilities', label: 'Facilities', icon: Calendar },
     { path: '/bookings', label: 'My Bookings', icon: Calendar },
+<<<<<<< HEAD
+=======
+    // ✅ NEW — Booking Calendar tab visible to all logged-in users
+    { path: '/calendar',  label: 'Booking Calendar', icon: CalendarDays },
+    // 👇 Admin tab only included if user is admin
+>>>>>>> 835593af65268b926afa642cccd6203e74f012b7
     ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Settings }] : []),
   ];
 
