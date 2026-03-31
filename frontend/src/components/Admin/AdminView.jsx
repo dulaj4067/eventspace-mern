@@ -14,12 +14,24 @@ import { AdminPaymentsTab } from './AdminPaymentsTab.jsx';
 import { useAdminPaymentsState } from './useAdminPaymentsState.jsx';
 import { RevenueTrackingTab } from './RevenueTrackingTab.jsx';
 
+// ✅ Filter options — value '' means show all (no filter sent to backend)
+const STATUS_FILTERS = [
+  { label: 'All',       value: ''          },
+  { label: 'Pending',   value: 'pending'   },
+  { label: 'Confirmed', value: 'confirmed' },
+  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Completed', value: 'completed' },
+  { label: 'No-Show',   value: 'no-show'   },
+];
+
 export function AdminView({
   bookings,
   facilities,
   onApproveBooking,
   onRejectBooking,
   confirmedBookingsByFacilityId,
+  statusFilter,            // ✅ active filter value
+  onStatusFilterChange,    // ✅ change filter callback
 }) {
   const { payments, loading, updateStatus, processPayment, deletePayment } = useAdminPaymentsState();
 
@@ -43,17 +55,40 @@ export function AdminView({
             <TabsTrigger value="revenue">Revenue Tracking</TabsTrigger>
           </TabsList>
 
-          {/* Bookings Tab */}
+          {/* ── Bookings Tab ─────────────────────────────────────────────── */}
           <TabsContent value="bookings" className="mt-6">
             <Card>
               <CardHeader>
                 <h2 className="text-2xl">All Bookings</h2>
                 <p className="text-gray-600">Review and manage booking requests</p>
+
+                {/* ✅ STATUS FILTER BUTTONS */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {STATUS_FILTERS.map((filter) => (
+                    <button
+                      key={filter.value}
+                      onClick={() => onStatusFilterChange(filter.value)}
+                      className={`px-4 py-1.5 rounded-full text-sm border transition-colors
+                        ${statusFilter === filter.value
+                          ? 'bg-purple-700 text-white border-purple-700'         // active
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600' // inactive
+                        }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
               </CardHeader>
+
               <CardContent>
                 <div className="space-y-4">
+                  {/* ✅ Empty state message reflects current filter */}
                   {bookings.length === 0 && (
-                    <p className="text-gray-500 text-center py-8">No bookings found.</p>
+                    <p className="text-gray-500 text-center py-8">
+                      {statusFilter
+                        ? `No ${statusFilter} bookings found.`
+                        : 'No bookings found.'}
+                    </p>
                   )}
 
                   {bookings.map((booking) => (
@@ -88,6 +123,7 @@ export function AdminView({
                           </div>
                         </div>
 
+                        {/* Approve/Reject — only for pending bookings */}
                         {booking.status === 'pending' && (
                           <div className="flex gap-2">
                             <Button
@@ -117,7 +153,7 @@ export function AdminView({
             </Card>
           </TabsContent>
 
-          {/* Facilities Tab */}
+          {/* Facilities Tab — unchanged */}
           <TabsContent value="facilities" className="mt-6">
             <Card>
               <CardHeader>
@@ -134,27 +170,15 @@ export function AdminView({
                   {facilities.length === 0 && (
                     <p className="text-gray-500 text-center py-8 col-span-2">No facilities found.</p>
                   )}
-
                   {facilities.map((facility) => {
-                    const facilityBookings =
-                      confirmedBookingsByFacilityId.get(facility._id) ?? 0;
-
+                    const facilityBookings = confirmedBookingsByFacilityId.get(facility._id) ?? 0;
                     return (
-                      <div
-                        key={facility._id}
-                        className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                      >
+                      <div key={facility._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex gap-4">
-                          <img
-                            src={facility.image}
-                            alt={facility.name}
-                            className="w-24 h-24 rounded-lg object-cover"
-                          />
+                          <img src={facility.image} alt={facility.name} className="w-24 h-24 rounded-lg object-cover" />
                           <div className="flex-1">
                             <h3 className="text-lg mb-1">{facility.name}</h3>
-                            <Badge variant="secondary" className="mb-2">
-                              {facility.type}
-                            </Badge>
+                            <Badge variant="secondary" className="mb-2">{facility.type}</Badge>
                             <div className="space-y-1 text-sm text-gray-600">
                               <div className="flex items-center gap-2">
                                 <Users className="w-4 h-4" />
@@ -183,7 +207,7 @@ export function AdminView({
             </Card>
           </TabsContent>
 
-          {/* Payments Tab */}
+          {/* Payments Tab — unchanged */}
           <TabsContent value="payments" className="mt-6">
             <AdminPaymentsTab
               payments={payments}
@@ -194,7 +218,7 @@ export function AdminView({
             />
           </TabsContent>
 
-          {/* Revenue Tracking Tab */}
+          {/* Revenue Tracking Tab — unchanged */}
           <TabsContent value="revenue" className="mt-6">
             <RevenueTrackingTab />
           </TabsContent>
