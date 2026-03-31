@@ -1,85 +1,94 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
 import { Label } from '../ui/label.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
-import { Calendar, Clock, Users, MapPin, Tag } from 'lucide-react';
+import { Calendar, Clock, Tag } from 'lucide-react';
 import { toast } from 'sonner';
-import { createEvent } from '../../services/eventService';
-import axios from 'axios';
+import { getEventById, updateEvent } from '../../services/eventService';
 
-export function CreateEvent() {
+export function EditEvent() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
   const [formData, setFormData] = useState({
-    eventName: '',
-    eventType: '',
+    name: '',
+    type: '',
     description: '',
-    facilityId: '',
     date: '',
     startTime: '',
     endTime: '',
-    expectedAttendees: '',
   });
 
   const eventTypes = ['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'];
 
   useEffect(() => {
-    const fetchFacilities = async () => {
+    const fetchEvent = async () => {
       try {
-        const response = await axios.get('/api/facilities');
-        setFacilities(response.data.data || []);
+        const response = await getEventById(id);
+        const event = response.data.data;
+        setFormData({
+          name: event.name || '',
+          type: event.type || '',
+          description: event.description || '',
+          date: event.schedule?.date?.split('T')[0] || '',
+          startTime: event.schedule?.startTime || '',
+          endTime: event.schedule?.endTime || '',
+        });
       } catch (err) {
-        console.error('Failed to load facilities', err);
-        toast.error('Failed to load facilities');
+        toast.error('Failed to load event');
+        console.error(err);
+      } finally {
+        setFetching(false);
       }
     };
-    fetchFacilities();
-  }, []);
+    fetchEvent();
+  }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.eventName || !formData.facilityId || !formData.date || !formData.startTime || !formData.endTime) {
+    if (!formData.name || !formData.date || !formData.startTime || !formData.endTime) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       setLoading(true);
-      await createEvent({
-        name: formData.eventName,
-        type: formData.eventType || 'other',
+      await updateEvent(id, {
+        name: formData.name,
         description: formData.description,
-        facility: formData.facilityId,
         schedule: {
           date: formData.date,
           startTime: formData.startTime,
           endTime: formData.endTime,
         },
-        attendance: {
-          maxAttendees: parseInt(formData.expectedAttendees) || 50,
-        },
       });
 
-      toast.success('Event created successfully!');
+      toast.success('Event updated successfully!');
       setTimeout(() => {
-        navigate('/events');
+        navigate(`/event/${id}`);
       }, 1500);
 
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to create event';
+      const message = err.response?.data?.message || 'Failed to update event';
       toast.error(message);
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) return (
+    <div className="flex justify-center items-center min-h-screen text-purple-600 text-xl">
+      Loading event...
+    </div>
+  );
 
   const minDate = new Date().toISOString().split('T')[0];
 
@@ -88,9 +97,9 @@ export function CreateEvent() {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl mb-4">Create Your Event</h1>
+            <h1 className="text-4xl md:text-5xl mb-4">Edit Event</h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Plan your event and book the perfect space for your community gathering
+              Update your event details
             </p>
           </div>
         </div>
@@ -100,20 +109,20 @@ export function CreateEvent() {
         <Card className="shadow-xl">
           <CardHeader>
             <h2 className="text-3xl">Event Details</h2>
-            <p className="text-gray-600">Tell us about your event</p>
+            <p className="text-gray-600">Update your event information</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="eventName">Event Name *</Label>
+                <Label htmlFor="name">Event Name *</Label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
-                    id="eventName"
+                    id="name"
                     type="text"
-                    value={formData.eventName}
-                    onChange={(e) => setFormData({ ...formData, eventName: e.target.value })}
-                    placeholder="e.g., Community Yoga Workshop"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Event name"
                     className="pl-10"
                     required
                   />
@@ -123,8 +132,8 @@ export function CreateEvent() {
               <div>
                 <Label htmlFor="eventType">Event Type</Label>
                 <Select
-                  value={formData.eventType}
-                  onValueChange={(value) => setFormData({ ...formData, eventType: value })}
+                  value={formData.type}
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select event type" />
@@ -148,28 +157,6 @@ export function CreateEvent() {
                   placeholder="Describe your event..."
                   rows={4}
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="facility">Select Facility *</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-                  <Select
-                    value={formData.facilityId}
-                    onValueChange={(value) => setFormData({ ...formData, facilityId: value })}
-                  >
-                    <SelectTrigger className="pl-10">
-                      <SelectValue placeholder="Choose a facility" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facilities.map((facility) => (
-                        <SelectItem key={facility._id} value={facility._id}>
-                          {facility.name} - {facility.type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div className="grid md:grid-cols-3 gap-4">
@@ -218,27 +205,11 @@ export function CreateEvent() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="expectedAttendees">Expected Number of Attendees</Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    id="expectedAttendees"
-                    type="number"
-                    value={formData.expectedAttendees}
-                    onChange={(e) => setFormData({ ...formData, expectedAttendees: e.target.value })}
-                    placeholder="Estimated number of people"
-                    className="pl-10"
-                    min="1"
-                  />
-                </div>
-              </div>
-
               <div className="flex gap-4 pt-4">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate(`/event/${id}`)}
                   className="flex-1"
                 >
                   Cancel
@@ -248,7 +219,7 @@ export function CreateEvent() {
                   disabled={loading}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
-                  {loading ? 'Creating...' : 'Create Event'}
+                  {loading ? 'Updating...' : 'Update Event'}
                 </Button>
               </div>
             </form>
