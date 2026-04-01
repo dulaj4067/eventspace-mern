@@ -1,4 +1,5 @@
-import { Calendar, Clock, DollarSign, Filter, MapPin, X } from 'lucide-react';
+//import { Calendar, Clock, DollarSign, Filter, MapPin, X } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Download, Filter, MapPin, X } from 'lucide-react';
 import { Badge } from '../ui/badge.jsx';
 import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
@@ -11,6 +12,7 @@ export function BookingsView({
   onFilterStatusChange,
   stats,
   onCancelBooking,
+  onDownloadReceipt, // receipt download handler
   isLoading,
 }) {
   return (
@@ -148,7 +150,13 @@ export function BookingsView({
                     )}
                     {booking.status === 'confirmed' && (
                       <>
-                        <Button variant="outline" size="sm">
+                        {/* ✅ Download Receipt button — triggers print-to-PDF */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onDownloadReceipt(booking)}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
                           Download Receipt
                         </Button>
                         <Button

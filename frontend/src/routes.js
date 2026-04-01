@@ -5,11 +5,15 @@ import { Events } from './components/Events/Events.jsx';
 import { Facilities } from './components/Facilities/Facilities.jsx';
 import { FacilityDetail } from './components/FacilityDetail/FacilityDetail.jsx';
 import { Bookings } from './components/Bookings/Bookings.jsx';
+import { BookingCalendar } from './components/Booking-calender/BookingCalendar.jsx'; // booking calander
 import { Admin } from './components/Admin/Admin.jsx';
 import { Login } from './components/Login/Login.jsx';
 import { Register } from './components/Register/Register.jsx';
 import { CreateEvent } from './components/CreateEvent/CreateEvent.jsx';
-import { CreateFacility } from './components/CreateFacility/CreateFacility.jsx';
+import { EditEvent } from './components/CreateEvent/EditEvent.jsx';
+import { EventDetail } from './components/EventDetail/EventDetail.jsx';
+import { MyEvents } from './components/MyEvents/MyEvents.jsx';
+import { EventAttendees } from './components/EventAttendees/EventAttendees.jsx';
 import { PaymentPage } from './components/PaymentPage/PaymentPage.jsx';
 import { NotFound } from './components/NotFound/NotFound.jsx';
 import { Profile } from './components/Profile/Profile.jsx';
@@ -33,15 +37,19 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/login" replace />, // 👈 redirect / to /login
+        element: <Navigate to="/login" replace />,
       },
       {
-        path: 'home',       // 👈 Home is now at /home
+        path: 'home',
         Component: Home,
       },
       {
         path: 'events',
         Component: Events,
+      },
+      {
+        path: 'my-events',
+        Component: MyEvents,
       },
       {
         path: 'facilities',
@@ -56,6 +64,10 @@ export const router = createBrowserRouter([
         Component: Bookings,
       },
       {
+        path: 'booking-calendar', //booking calander
+        Component: BookingCalendar,
+      },
+      {
         path: 'profile',
         Component: Profile,
       },
@@ -68,8 +80,16 @@ export const router = createBrowserRouter([
         Component: CreateEvent,
       },
       {
-        path: 'create-facility',
-        Component: CreateFacility,
+        path: 'edit-event/:id',
+        Component: EditEvent,
+      },
+      {
+        path: 'event/:id',
+        Component: EventDetail,
+      },
+      {
+        path: 'event/:id/attendees',
+        Component: EventAttendees,
       },
       {
         path: '*',

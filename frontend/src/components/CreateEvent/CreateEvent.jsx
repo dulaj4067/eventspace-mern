@@ -6,16 +6,17 @@ import { Label } from '../ui/label.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
-import { Calendar, Clock, Users, MapPin, Tag, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Tag, Image as ImageIcon, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import { createEvent } from '../../services/eventService';
+import axios from 'axios';
 
 export function CreateEvent() {
   const navigate = useNavigate();
   const [imageFile, setImageFile] = useState(null);
-  const [availableFacilities, setAvailableFacilities] = useState([]);
+  const [facilities, setFacilities] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
   const [formData, setFormData] = useState({
     eventName: '',
     eventType: '',
@@ -25,44 +26,47 @@ export function CreateEvent() {
     startTime: '',
     endTime: '',
     expectedAttendees: '',
+    isFree: true,
+    price: '',
+    currency: 'USD',
   });
 
   const eventTypes = ['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'];
 
   useEffect(() => {
-    let isMounted = true;
     const fetchFacilities = async () => {
       setIsLoadingFacilities(true);
       try {
-        const res = await fetch('/api/facilities?limit=100');
-        const data = await res.json();
-        if (isMounted && data.success) {
-          setAvailableFacilities(data.data || []);
-        }
+        const response = await axios.get('/api/facilities');
+        setFacilities(response.data.data || []);
       } catch (err) {
-        console.error('Failed to fetch facilities', err);
+        console.error('Failed to load facilities', err);
+        toast.error('Failed to load facilities');
       } finally {
-        if (isMounted) setIsLoadingFacilities(false);
+        setIsLoadingFacilities(false);
       }
     };
     fetchFacilities();
-    return () => { isMounted = false; };
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.eventName || !formData.eventType || !formData.facilityId || !formData.date || !formData.startTime || !formData.endTime) {
+
+    if (!formData.eventName || !formData.facilityId || !formData.date || !formData.startTime || !formData.endTime) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    setIsSubmitting(true);
+    if (!formData.isFree && (!formData.price || parseFloat(formData.price) <= 0)) {
+      toast.error('Please enter a valid ticket price');
+      return;
+    }
 
     try {
+      setLoading(true);
       let imageUrl = null;
 
-      // 1. Upload Event Poster Image
+      // Upload Event Poster Image if provided
       if (imageFile) {
         const fd = new FormData();
         fd.append('image', imageFile);
@@ -73,52 +77,43 @@ export function CreateEvent() {
           imageUrl = uploadData.imageUrl;
         } else {
           toast.error(uploadData.message || 'Image upload failed');
-          setIsSubmitting(false);
+          setLoading(false);
           return;
         }
       }
 
-      // 2. Submit to actual backend
-      const token = localStorage.getItem('token');
-      const payload = {
+      await createEvent({
         name: formData.eventName,
-        type: formData.eventType.toLowerCase(),
+        type: formData.eventType || 'other',
         description: formData.description,
         facility: formData.facilityId,
         image: imageUrl,
         schedule: {
           date: formData.date,
           startTime: formData.startTime,
-          endTime: formData.endTime
+          endTime: formData.endTime,
         },
         attendance: {
-          maxAttendees: Number(formData.expectedAttendees) || 0
-        }
-      };
-
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          maxAttendees: parseInt(formData.expectedAttendees) || 50,
         },
-        body: JSON.stringify(payload)
+        pricing: {
+          isFree: formData.isFree,
+          price: formData.isFree ? 0 : parseFloat(formData.price),
+          currency: formData.currency,
+        },
       });
-      const data = await res.json();
 
-      if (res.ok && data.success) {
-        toast.success('Event created successfully! Redirecting...');
-        setTimeout(() => {
-          navigate(`/events`);
-        }, 1500);
-      } else {
-        toast.error(data.message || 'Failed to create event. Make sure you are logged in.');
-      }
-    } catch (error) {
-      console.error('Submit Error:', error);
-      toast.error('An error occurred');
+      toast.success('Event created successfully!');
+      setTimeout(() => {
+        navigate('/my-events');
+      }, 1500);
+
+    } catch (err) {
+      const message = err.response?.data?.message || 'Failed to create event';
+      toast.error(message);
+      console.error(err);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -160,6 +155,7 @@ export function CreateEvent() {
                 </div>
               </div>
 
+              {/* Event Name */}
               <div>
                 <Label htmlFor="eventName">Event Name *</Label>
                 <div className="relative mt-2">
@@ -177,24 +173,22 @@ export function CreateEvent() {
               </div>
 
               <div>
-                <Label htmlFor="eventType">Event Type *</Label>
-                <div className="mt-2">
-                  <Select
-                    value={formData.eventType}
-                    onValueChange={(value) => setFormData({ ...formData, eventType: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select event type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {eventTypes.map((type) => (
-                        <SelectItem key={type} value={type} className="capitalize">
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Label htmlFor="eventType">Event Type</Label>
+                <Select
+                  value={formData.eventType}
+                  onValueChange={(value) => setFormData({ ...formData, eventType: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -203,13 +197,13 @@ export function CreateEvent() {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe your event, its purpose, and what attendees can expect..."
+                  placeholder="Describe your event..."
                   rows={4}
                   className="mt-2"
                 />
               </div>
 
-              {/* Facility Selection */}
+              {/* Facility */}
               <div>
                 <Label htmlFor="facility">Select Facility *</Label>
                 <div className="relative mt-2">
@@ -223,9 +217,9 @@ export function CreateEvent() {
                       <SelectValue placeholder={isLoadingFacilities ? "Loading facilities..." : "Choose a facility"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableFacilities.map((facility) => (
+                      {facilities.map((facility) => (
                         <SelectItem key={facility._id} value={facility._id}>
-                          {facility.name} - {facility.type} (${facility.hourlyRate}/hr)
+                          {facility.name} - {facility.type} {facility.hourlyRate ? `($${facility.hourlyRate}/hr)` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -295,22 +289,105 @@ export function CreateEvent() {
                 </div>
               </div>
 
+              {/* Pricing Section */}
+              <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                <Label className="text-lg font-semibold">Ticket Pricing</Label>
+
+                {/* Free or Paid toggle */}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isFree: true, price: '' })}
+                    className={`flex-1 py-3 rounded-lg font-semibold border-2 transition-colors ${
+                      formData.isFree
+                        ? 'bg-green-500 text-white border-green-500'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+                    }`}
+                  >
+                    🎟️ Free Event
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isFree: false })}
+                    className={`flex-1 py-3 rounded-lg font-semibold border-2 transition-colors ${
+                      !formData.isFree
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400'
+                    }`}
+                  >
+                    💰 Paid Event
+                  </button>
+                </div>
+
+                {/* Price input - only show if paid */}
+                {!formData.isFree && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="price">Ticket Price *</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          id="price"
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          placeholder="0.00"
+                          className="pl-10"
+                          min="0.01"
+                          step="0.01"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="currency">Currency</Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD - US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                          <SelectItem value="LKR">LKR - Sri Lankan Rupee</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing summary */}
+                <div className={`p-3 rounded-lg text-sm font-medium ${
+                  formData.isFree
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-purple-100 text-purple-800'
+                }`}>
+                  {formData.isFree
+                    ? '✅ This event is free — no payment required for registration'
+                    : `💳 Attendees will be charged ${formData.price || '0'} ${formData.currency} to register`}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
               <div className="flex gap-4 pt-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate('/events')}
                   className="flex-1"
-                  disabled={isSubmitting}
+                  disabled={loading}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={loading}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Event'}
+                  {loading ? 'Creating...' : 'Create Event'}
                 </Button>
               </div>
             </form>

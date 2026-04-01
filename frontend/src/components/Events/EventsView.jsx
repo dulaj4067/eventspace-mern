@@ -106,15 +106,15 @@ export function EventsView({
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 />
                 {filteredEvents.map((event) => (
-                  <Marker key={event.id} position={event.coordinates}>
+                  <Marker key={event._id} position={event.coordinates || [40.7128, -74.006]}>
                     <Popup>
                       <div className="p-2">
                         <h3 className="font-semibold mb-1">{event.name}</h3>
                         <p className="text-sm text-gray-600 mb-2">{event.type}</p>
-                        <p className="text-sm mb-1">📅 {new Date(event.date).toLocaleDateString()}</p>
-                        <p className="text-sm mb-1">🕒 {event.time}</p>
-                        <p className="text-sm mb-2">📍 {event.location}</p>
-                        <Link to={`/event/${event.id}`} className="text-purple-600 text-sm hover:underline">
+                        <p className="text-sm mb-1">📅 {new Date(event.schedule?.date).toLocaleDateString()}</p>
+                        <p className="text-sm mb-1">🕒 {event.schedule?.startTime} - {event.schedule?.endTime}</p>
+                        <p className="text-sm mb-2">📍 {event.facility?.name || 'TBA'}</p>
+                        <Link to={`/event/${event._id}`} className="text-purple-600 text-sm hover:underline">
                           View Details →
                         </Link>
                       </div>
@@ -134,9 +134,11 @@ export function EventsView({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedEvents.map((event) => (
-                <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="relative h-48">
-                    <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                <Card key={event._id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="relative h-48 bg-gradient-to-r from-blue-400 to-purple-400">
+                    {event.image && (
+                      <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                    )}
                     <Badge className="absolute top-3 right-3 bg-white text-gray-900">
                       {event.type}
                     </Badge>
@@ -147,27 +149,27 @@ export function EventsView({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(event.date).toLocaleDateString()}</span>
+                        <span>{new Date(event.schedule?.date).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Clock className="w-4 h-4" />
-                        <span>{event.time}</span>
+                        <span>{event.schedule?.startTime} - {event.schedule?.endTime}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <MapPin className="w-4 h-4" />
-                        <span>{event.location}</span>
+                        <span>{event.facility?.name || 'TBA'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Users className="w-4 h-4" />
                         <span>
-                          {event.attendees}/{event.maxAttendees} attending
+                          {event.attendance?.currentAttendees || 0}/{event.attendance?.maxAttendees || 0} attending
                         </span>
                       </div>
                     </div>
                   </CardContent>
                   <CardFooter className="p-6 pt-0">
                     <Link
-                      to={`/event/${event.id}`}
+                      to={`/event/${event._id}`}
                       className="w-full inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-white hover:from-blue-700 hover:to-purple-700 transition-colors"
                     >
                       View Details & Register
@@ -196,4 +198,3 @@ export function EventsView({
     </div>
   );
 }
-

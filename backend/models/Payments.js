@@ -39,7 +39,7 @@ const paymentSchema = new Schema({
     paymentStatus: {
         type: String,
         required: true,
-        enum: ['pending', 'completed', 'failed'],
+        enum: ['pending', 'completed', 'failed', 'refunded'],
         default: 'pending'
     },
     transactionId: {
@@ -49,6 +49,20 @@ const paymentSchema = new Schema({
     paidAt: {
         type: Date,
         required: false
+    },
+    // Refund tracking
+    refundedAt: {
+        type: Date,
+        required: false
+    },
+    refundReason: {
+        type: String,
+        required: false
+    },
+    refundAmount: {
+        type: Number,
+        required: false,
+        min: 0
     }
 }, {
     timestamps: true

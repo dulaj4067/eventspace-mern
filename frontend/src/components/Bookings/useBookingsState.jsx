@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { generateReceiptHTML } from './receiptTemplate.js'; // ✅ ADDED: import receipt template
 
 export function useBookingsState() {
   const [bookings, setBookings] = useState([]);
@@ -64,6 +65,17 @@ export function useBookingsState() {
       toast.error(error.message || 'Failed to cancel booking');
     }
   }, []);
+  
+
+  // ✅ ADDED: downloadReceipt — gets HTML from receiptTemplate.js and triggers browser print-to-PDF.
+  // Called from BookingsView when user clicks "Download Receipt" on a confirmed booking.
+  const downloadReceipt = useCallback((booking) => {
+    const html = generateReceiptHTML(booking); // ✅ ADDED: HTML lives in receiptTemplate.js
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  }, []);
 
   return {
     bookings,
@@ -72,6 +84,7 @@ export function useBookingsState() {
     setFilterStatus,
     stats,
     cancelBooking,
+    downloadReceipt, // ✅ ADDED
     isLoading,
   };
 }
