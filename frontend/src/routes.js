@@ -5,6 +5,7 @@ import { Events } from './components/Events/Events.jsx';
 import { Facilities } from './components/Facilities/Facilities.jsx';
 import { FacilityDetail } from './components/FacilityDetail/FacilityDetail.jsx';
 import { Bookings } from './components/Bookings/Bookings.jsx';
+import { BookingCalendar } from './components/Booking-calender/BookingCalendar.jsx'; // booking calander
 import { Admin } from './components/Admin/Admin.jsx';
 import { Login } from './components/Login/Login.jsx';
 import { Register } from './components/Register/Register.jsx';
@@ -61,6 +62,10 @@ export const router = createBrowserRouter([
       {
         path: 'bookings',
         Component: Bookings,
+      },
+      {
+        path: 'booking-calendar', //booking calander
+        Component: BookingCalendar,
       },
       {
         path: 'profile',
