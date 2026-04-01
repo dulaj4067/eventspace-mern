@@ -16,7 +16,8 @@ export function Layout() {
     { path: '/my-events', label: 'My Events', icon: Calendar },
     { path: '/facilities', label: 'Facilities', icon: Calendar },
     { path: '/bookings', label: 'My Bookings', icon: Calendar },
-    { path: '/calendar', label: 'Booking Calendar', icon: CalendarDays },
+    // To this:
+    { path: '/booking-calendar', label: 'Booking Calendar', icon: CalendarDays },
     ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Settings }] : []),
   ];
 
