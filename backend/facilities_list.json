@@ -1,0 +1,148 @@
+[
+  {
+    "location": {
+      "address": {
+        "street": "123 Galle Road",
+        "city": "Colombo",
+        "state": "Western",
+        "zipCode": "00300",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 6.9271,
+        "longitude": 79.8612
+      },
+      "building": "TechPark Colombo",
+      "floor": "3rd Floor",
+      "room": "C-301"
+    },
+    "_id": "65f100000000000000000001",
+    "name": "Orchid Conference Hall",
+    "type": "Conference Room"
+  },
+  {
+    "location": {
+      "address": {
+        "street": "123 Main St",
+        "city": "Colombo",
+        "state": "Western",
+        "zipCode": "00100",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 6.9271,
+        "longitude": 79.8612
+      },
+      "building": "Main Building",
+      "floor": "1st",
+      "room": "101"
+    },
+    "_id": "699e229a320e7f3d88d17a9d",
+    "name": "Grand Conference Hall",
+    "type": "Conference Room"
+  },
+  {
+    "location": {
+      "address": {
+        "street": "321 Sky Rd",
+        "city": "Colombo",
+        "state": "Western",
+        "zipCode": "00100",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 6.9271,
+        "longitude": 79.8612
+      },
+      "building": "Sky Tower",
+      "floor": "10th",
+      "room": "Room 1001"
+    },
+    "_id": "699e229a320e7f3d88d17aa5",
+    "name": "Skyline Meeting Room",
+    "type": "Meeting Room"
+  },
+  {
+    "location": {
+      "address": {
+        "street": "456 Ocean Rd",
+        "city": "Galle",
+        "state": "Southern",
+        "zipCode": "80000",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 6.0325,
+        "longitude": 80.214
+      },
+      "building": "Ocean Building",
+      "floor": "Ground",
+      "room": "Auditorium A"
+    },
+    "_id": "699e229a320e7f3d88d17aa0",
+    "name": "Oceanview Auditorium",
+    "type": "Auditorium"
+  },
+  {
+    "location": {
+      "address": {
+        "street": "654 Sunset Blvd",
+        "city": "Negombo",
+        "state": "Western",
+        "zipCode": "11500",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 7.2,
+        "longitude": 79.8333
+      },
+      "building": "Sunset Pavilion",
+      "floor": "Ground",
+      "room": "Garden Area"
+    },
+    "_id": "699e229a320e7f3d88d17aa7",
+    "name": "Sunset Outdoor Space",
+    "type": "Outdoor Space"
+  },
+  {
+    "location": {
+      "address": {
+        "street": "789 Wellness St",
+        "city": "Kandy",
+        "state": "Central",
+        "zipCode": "20000",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 7.2906,
+        "longitude": 80.6337
+      },
+      "building": "Wellness Center",
+      "floor": "2nd",
+      "room": "Studio 2"
+    },
+    "_id": "699e229a320e7f3d88d17aa3",
+    "name": "Fitness Studio",
+    "type": "Fitness Center"
+  },
+  {
+    "location": {
+      "address": {
+        "street": "Lake Round Road",
+        "city": "Kurunegala",
+        "state": "North Western",
+        "zipCode": "60000",
+        "country": "Sri Lanka"
+      },
+      "coordinates": {
+        "latitude": 7.4842,
+        "longitude": 80.3625
+      },
+      "building": "Private Grounds",
+      "floor": "Ground"
+    },
+    "_id": "69a748a1573fff8eaa06fe32",
+    "name": "Kasun's Lakeside Pavilion",
+    "type": "Outdoor Space"
+  }
+]
