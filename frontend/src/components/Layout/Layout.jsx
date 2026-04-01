@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Calendar, Home, Settings, Menu, X, LogOut, User, CalendarDays } from 'lucide-react';
-import { useState } from 'react';
+import { Calendar, Home, Settings, Menu, X, LogOut, User, CalendarDays, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { Button } from '../ui/button.jsx';
 import logo from '../../assets/logo.png';
@@ -8,6 +8,8 @@ import logo from '../../assets/logo.png';
 export function Layout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [bookingsDropdownOpen, setBookingsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const { logout, isAuthenticated, isAdmin } = useAuth();
 
   const navItems = [
@@ -15,25 +17,33 @@ export function Layout() {
     { path: '/events', label: 'Events', icon: CalendarDays },
     { path: '/my-events', label: 'My Events', icon: Calendar },
     { path: '/facilities', label: 'Facilities', icon: Calendar },
-    { path: '/bookings', label: 'My Bookings', icon: Calendar },
-    // To this:
-    { path: '/booking-calendar', label: 'Booking Calendar', icon: CalendarDays },
-    ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Settings }] : []),
   ];
 
   const isActive = (path) => {
-    if (path === '/home') {
-      return location.pathname === '/home';
-    }
+    if (path === '/home') return location.pathname === '/home';
     return location.pathname.startsWith(path);
   };
+
+  const isBookingsActive =
+    isActive('/bookings') || isActive('/booking-calendar');
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setBookingsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm border-b sticky top-0 z-[5000] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <Link to="/home" className="flex items-center gap-3">
               <img src={logo} alt="EventSpace" className="w-10 h-10" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -42,14 +52,14 @@ export function Layout() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                       isActive(item.path)
                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
                         : 'text-gray-600 hover:bg-gray-50'
@@ -60,6 +70,70 @@ export function Layout() {
                   </Link>
                 );
               })}
+
+              {/* My Bookings Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setBookingsDropdownOpen(!bookingsDropdownOpen)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                    isBookingsActive
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>My Bookings</span>
+                  <ChevronDown
+                    className={`w-3 h-3 transition-transform duration-200 ${
+                      bookingsDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {bookingsDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                    <Link
+                      to="/bookings"
+                      onClick={() => setBookingsDropdownOpen(false)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+                        isActive('/bookings') && !isActive('/booking-calendar')
+                          ? 'text-blue-600 bg-blue-50'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      My Bookings
+                    </Link>
+                    <Link
+                      to="/booking-calendar"
+                      onClick={() => setBookingsDropdownOpen(false)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+                        isActive('/booking-calendar')
+                          ? 'text-blue-600 bg-blue-50'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <CalendarDays className="w-4 h-4" />
+                      Booking Calendar
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Admin — always last */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                    isActive('/admin')
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Admin</span>
+                </Link>
+              )}
             </nav>
 
             {/* Auth Buttons */}
@@ -104,7 +178,7 @@ export function Layout() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <nav className="md:hidden py-4 space-y-2">
+            <nav className="md:hidden py-4 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -123,6 +197,38 @@ export function Layout() {
                   </Link>
                 );
               })}
+
+              {/* Mobile: My Bookings section with sub-items */}
+              <div className="px-3 pt-1">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 px-0">
+                  My Bookings
+                </p>
+                <Link
+                  to="/bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    isActive('/bookings') && !isActive('/booking-calendar')
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>My Bookings</span>
+                </Link>
+                <Link
+                  to="/booking-calendar"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    isActive('/booking-calendar')
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Booking Calendar</span>
+                </Link>
+              </div>
+
               <div className="pt-4 border-t space-y-2">
                 {isAuthenticated ? (
                   <>
@@ -187,6 +293,7 @@ export function Layout() {
                 <li><Link to="/my-events" className="hover:text-white">My Events</Link></li>
                 <li><Link to="/facilities" className="hover:text-white">Browse Facilities</Link></li>
                 <li><Link to="/bookings" className="hover:text-white">My Bookings</Link></li>
+                <li><Link to="/booking-calendar" className="hover:text-white">Booking Calendar</Link></li>
               </ul>
             </div>
             <div>
