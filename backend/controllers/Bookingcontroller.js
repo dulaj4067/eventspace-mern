@@ -267,7 +267,9 @@ const cancelBooking = async (req, res) => {
 };
 
 
-// 6. DELETE BOOKING (Admin only)
+// 6. DELETE BOOKING
+// ✅ UPDATED: Users can delete their own cancelled bookings.
+//             Admins can delete any booking regardless of status.
 
 const deleteBooking = async (req, res) => {
     try {
@@ -276,6 +278,24 @@ const deleteBooking = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        // ✅ ADDED: If the requester is a regular user, enforce ownership + cancelled-only rules
+        if (req.user.role !== 'admin') {
+            // Users can only delete their own bookings
+            if (booking.user.toString() !== req.user.id) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You can only delete your own bookings.'
+                });
+            }
+            // Users can only delete cancelled bookings
+            if (booking.status !== 'cancelled') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'You can only delete cancelled bookings.'
+                });
+            }
         }
 
         await Booking.findByIdAndDelete(bookingId);

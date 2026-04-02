@@ -12,7 +12,7 @@ export function useBookingsState() {
     const fetchBookings = async () => {
       try {
         const token = localStorage.getItem('token');
-       const response = await fetch('/api/bookings/my', { //fix to get only user own bookings
+        const response = await fetch('/api/bookings/my', { //fix to get only user own bookings
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
@@ -65,7 +65,6 @@ export function useBookingsState() {
       toast.error(error.message || 'Failed to cancel booking');
     }
   }, []);
-  
 
   // ✅ ADDED: downloadReceipt — gets HTML from receiptTemplate.js and triggers browser print-to-PDF.
   // Called from BookingsView when user clicks "Download Receipt" on a confirmed booking.
@@ -77,6 +76,26 @@ export function useBookingsState() {
     win.onload = () => win.print();
   }, []);
 
+  // ✅ ADDED: deleteBooking — permanently removes a cancelled booking from the list.
+  // Only available for cancelled bookings. Calls DELETE /api/bookings/:id/cancelled.
+  const deleteBooking = useCallback(async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/bookings/${id}/cancelled`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      // Remove deleted booking from local state immediately
+      setBookings((prev) => prev.filter((booking) => booking._id !== id));
+      toast.success('Booking deleted successfully');
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete booking');
+    }
+  }, []);
+
   return {
     bookings,
     filteredBookings,
@@ -85,6 +104,7 @@ export function useBookingsState() {
     stats,
     cancelBooking,
     downloadReceipt, // ✅ ADDED
+    deleteBooking,   // ✅ ADDED
     isLoading,
   };
 }
