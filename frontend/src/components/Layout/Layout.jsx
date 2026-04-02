@@ -9,29 +9,26 @@ export function Layout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bookingsDropdownOpen, setBookingsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [eventsDropdownOpen, setEventsDropdownOpen] = useState(false);
+  const bookingsDropdownRef = useRef(null);
+  const eventsDropdownRef = useRef(null);
   const { logout, isAuthenticated, isAdmin } = useAuth();
-
-  const navItems = [
-    { path: '/home', label: 'Home', icon: Home },
-    { path: '/events', label: 'Events', icon: CalendarDays },
-    { path: '/my-events', label: 'My Events', icon: Calendar },
-    { path: '/facilities', label: 'Facilities', icon: Calendar },
-  ];
 
   const isActive = (path) => {
     if (path === '/home') return location.pathname === '/home';
     return location.pathname.startsWith(path);
   };
 
-  const isBookingsActive =
-    isActive('/bookings') || isActive('/booking-calendar');
+  const isBookingsActive = isActive('/bookings') || isActive('/booking-calendar');
+  const isEventsActive = isActive('/events') || isActive('/my-events');
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      if (bookingsDropdownRef.current && !bookingsDropdownRef.current.contains(e.target)) {
         setBookingsDropdownOpen(false);
+      }
+      if (eventsDropdownRef.current && !eventsDropdownRef.current.contains(e.target)) {
+        setEventsDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -40,10 +37,9 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm border-b sticky top-0 z-[5000] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-16">
             <Link to="/home" className="flex items-center gap-3">
               <img src={logo} alt="EventSpace" className="w-10 h-10" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -53,26 +49,88 @@ export function Layout() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                      isActive(item.path)
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+
+              {/* Home */}
+              <Link
+                to="/home"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  isActive('/home')
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Home className="w-4 h-4" />
+                <span>Home</span>
+              </Link>
+
+              {/* Events Dropdown */}
+              <div className="relative" ref={eventsDropdownRef}>
+                <button
+                  onClick={() => setEventsDropdownOpen(!eventsDropdownOpen)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                    isEventsActive
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Events</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${eventsDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {eventsDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                    <Link
+                      to="/events"
+                      onClick={() => setEventsDropdownOpen(false)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+                        isActive('/events') && !isActive('/my-events')
+                          ? 'text-blue-600 bg-blue-50'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <CalendarDays className="w-4 h-4" />
+                      All Events
+                    </Link>
+                    <Link
+                      to="/my-events"
+                      onClick={() => setEventsDropdownOpen(false)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+                        isActive('/my-events')
+                          ? 'text-blue-600 bg-blue-50'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      My Events
+                    </Link>
+                    <Link
+                      to="/create-event"
+                      onClick={() => setEventsDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      <span className="text-purple-600 font-bold text-lg">+</span>
+                      Create Event
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Facilities */}
+              <Link
+                to="/facilities"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  isActive('/facilities')
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Facilities</span>
+              </Link>
 
               {/* My Bookings Dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative" ref={bookingsDropdownRef}>
                 <button
                   onClick={() => setBookingsDropdownOpen(!bookingsDropdownOpen)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
@@ -83,11 +141,7 @@ export function Layout() {
                 >
                   <Calendar className="w-4 h-4" />
                   <span>My Bookings</span>
-                  <ChevronDown
-                    className={`w-3 h-3 transition-transform duration-200 ${
-                      bookingsDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                  />
+                  <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${bookingsDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {bookingsDropdownOpen && (
@@ -120,7 +174,7 @@ export function Layout() {
                 )}
               </div>
 
-              {/* Admin — always last */}
+              {/* Admin */}
               {isAdmin && (
                 <Link
                   to="/admin"
@@ -146,12 +200,7 @@ export function Layout() {
                       View Profile
                     </Button>
                   </Link>
-                  <Button
-                    onClick={logout}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
+                  <Button onClick={logout} variant="outline" size="sm" className="flex items-center gap-2">
                     <LogOut className="w-4 h-4" />
                     Logout
                   </Button>
@@ -179,91 +228,83 @@ export function Layout() {
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
             <nav className="md:hidden py-4 space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                      isActive(item.path)
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+              <Link
+                to="/home"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  isActive('/home')
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Home className="w-4 h-4" />
+                <span>Home</span>
+              </Link>
 
-              {/* Mobile: My Bookings section with sub-items */}
               <div className="px-3 pt-1">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 px-0">
-                  My Bookings
-                </p>
-                <Link
-                  to="/bookings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                    isActive('/bookings') && !isActive('/booking-calendar')
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Events</p>
+                <Link to="/events" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
+                  <CalendarDays className="w-4 h-4" />
+                  <span>All Events</span>
+                </Link>
+                <Link to="/my-events" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
+                  <Calendar className="w-4 h-4" />
+                  <span>My Events</span>
+                </Link>
+                <Link to="/create-event" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
+                  <span className="text-purple-600 font-bold">+</span>
+                  <span>Create Event</span>
+                </Link>
+              </div>
+
+              <Link
+                to="/facilities"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  isActive('/facilities')
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Facilities</span>
+              </Link>
+
+              <div className="px-3 pt-1">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">My Bookings</p>
+                <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
                   <Calendar className="w-4 h-4" />
                   <span>My Bookings</span>
                 </Link>
-                <Link
-                  to="/booking-calendar"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                    isActive('/booking-calendar')
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
+                <Link to="/booking-calendar" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
                   <CalendarDays className="w-4 h-4" />
                   <span>Booking Calendar</span>
                 </Link>
               </div>
 
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
+                  <Settings className="w-4 h-4" />
+                  <span>Admin</span>
+                </Link>
+              )}
+
               <div className="pt-4 border-t space-y-2">
                 {isAuthenticated ? (
                   <>
-                    <Link
-                      to="/profile"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50"
-                    >
+                    <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
                       <User className="w-4 h-4" />
                       View Profile
                     </Link>
-                    <button
-                      onClick={() => { logout(); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50"
-                    >
+                    <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
                       <LogOut className="w-4 h-4" />
                       Logout
                     </button>
                   </>
                 ) : (
                   <>
-                    <Link
-                      to="/login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50"
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center"
-                    >
-                      Sign Up
-                    </Link>
+                    <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Sign In</Link>
+                    <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center">Sign Up</Link>
                   </>
                 )}
               </div>
@@ -293,7 +334,6 @@ export function Layout() {
                 <li><Link to="/my-events" className="hover:text-white">My Events</Link></li>
                 <li><Link to="/facilities" className="hover:text-white">Browse Facilities</Link></li>
                 <li><Link to="/bookings" className="hover:text-white">My Bookings</Link></li>
-                <li><Link to="/booking-calendar" className="hover:text-white">Booking Calendar</Link></li>
               </ul>
             </div>
             <div>
