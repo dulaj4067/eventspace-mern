@@ -139,6 +139,33 @@ export function useAdminDashboardState() {
     }
   }, [statusFilter]);
 
+  // ✅ ADDED: deleteBooking — admin can permanently delete any booking regardless of status.
+  // Calls DELETE /api/bookings/:id (admin-only route).
+  // Removes the booking from local state immediately after success.
+  const deleteBooking = useCallback(async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/bookings/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to delete booking');
+      }
+
+      // ✅ Remove deleted booking from local state immediately
+      setBookings((prev) => prev.filter((b) => b._id !== id));
+      toast.success('Booking deleted successfully');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete booking');
+    }
+  }, []);
+
   // ─── Stats (always computed from ALL loaded bookings) ────────────────────
   const stats = useMemo(() => {
     const confirmedBookings = bookings.filter((b) => b.status === 'confirmed');
@@ -169,8 +196,9 @@ export function useAdminDashboardState() {
     error,
     approveBooking,
     rejectBooking,
+    deleteBooking,              // ✅ ADDED
     confirmedBookingsByFacilityId,
-    statusFilter,       // ✅ expose to Admin.jsx
-    setStatusFilter,    // ✅ expose to Admin.jsx
+    statusFilter,               // ✅ expose to Admin.jsx
+    setStatusFilter,            // ✅ expose to Admin.jsx
   };
 }

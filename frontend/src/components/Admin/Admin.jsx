@@ -10,9 +10,10 @@ export function Admin() {
     error,
     approveBooking,
     rejectBooking,
+    deleteBooking,               // ✅ ADDED
     confirmedBookingsByFacilityId,
-    statusFilter,        // ✅
-    setStatusFilter,     // ✅
+    statusFilter,
+    setStatusFilter,
   } = useAdminDashboardState();
 
   if (loading) {
@@ -38,9 +39,10 @@ export function Admin() {
       stats={stats}
       onApproveBooking={approveBooking}
       onRejectBooking={rejectBooking}
+      onDeleteBooking={deleteBooking}          // ✅ ADDED
       confirmedBookingsByFacilityId={confirmedBookingsByFacilityId}
-      statusFilter={statusFilter}            // ✅
-      onStatusFilterChange={setStatusFilter} // ✅
+      statusFilter={statusFilter}
+      onStatusFilterChange={setStatusFilter}
     />
   );
 }
