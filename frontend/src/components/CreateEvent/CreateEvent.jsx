@@ -6,16 +6,17 @@ import { Label } from '../ui/label.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
-import { Calendar, Clock, Users, MapPin, Tag, DollarSign } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Tag, Image as ImageIcon, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { createEvent } from '../../services/eventService';
 import axios from 'axios';
 
 export function CreateEvent() {
   const navigate = useNavigate();
+  const [imageFile, setImageFile] = useState(null);
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
   const [formData, setFormData] = useState({
     eventName: '',
     eventType: '',
@@ -34,12 +35,15 @@ export function CreateEvent() {
 
   useEffect(() => {
     const fetchFacilities = async () => {
+      setIsLoadingFacilities(true);
       try {
         const response = await axios.get('/api/facilities');
         setFacilities(response.data.data || []);
       } catch (err) {
         console.error('Failed to load facilities', err);
         toast.error('Failed to load facilities');
+      } finally {
+        setIsLoadingFacilities(false);
       }
     };
     fetchFacilities();
@@ -60,11 +64,30 @@ export function CreateEvent() {
 
     try {
       setLoading(true);
+      let imageUrl = null;
+
+      // Upload Event Poster Image if provided
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append('image', imageFile);
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
+        const uploadData = await uploadRes.json();
+        
+        if (uploadData.success) {
+          imageUrl = uploadData.imageUrl;
+        } else {
+          toast.error(uploadData.message || 'Image upload failed');
+          setLoading(false);
+          return;
+        }
+      }
+
       await createEvent({
         name: formData.eventName,
         type: formData.eventType || 'other',
         description: formData.description,
         facility: formData.facilityId,
+        image: imageUrl,
         schedule: {
           date: formData.date,
           startTime: formData.startTime,
@@ -103,7 +126,7 @@ export function CreateEvent() {
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl mb-4">Create Your Event</h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Plan your event and book the perfect space for your community gathering
+              Plan your event and hook it into our community
             </p>
           </div>
         </div>
@@ -113,15 +136,29 @@ export function CreateEvent() {
         <Card className="shadow-xl">
           <CardHeader>
             <h2 className="text-3xl">Event Details</h2>
-            <p className="text-gray-600">Tell us about your event</p>
+            <p className="text-gray-600">Provide everything people need to know</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              
+              <div>
+                <Label htmlFor="image">Event Poster Image</Label>
+                <div className="relative mt-2">
+                  <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files[0])}
+                    className="pl-10 cursor-pointer"
+                  />
+                </div>
+              </div>
 
               {/* Event Name */}
               <div>
                 <Label htmlFor="eventName">Event Name *</Label>
-                <div className="relative">
+                <div className="relative mt-2">
                   <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
                     id="eventName"
@@ -135,7 +172,6 @@ export function CreateEvent() {
                 </div>
               </div>
 
-              {/* Event Type */}
               <div>
                 <Label htmlFor="eventType">Event Type</Label>
                 <Select
@@ -155,7 +191,6 @@ export function CreateEvent() {
                 </Select>
               </div>
 
-              {/* Description */}
               <div>
                 <Label htmlFor="description">Event Description</Label>
                 <Textarea
@@ -164,25 +199,27 @@ export function CreateEvent() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe your event..."
                   rows={4}
+                  className="mt-2"
                 />
               </div>
 
               {/* Facility */}
               <div>
                 <Label htmlFor="facility">Select Facility *</Label>
-                <div className="relative">
+                <div className="relative mt-2">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
                   <Select
                     value={formData.facilityId}
                     onValueChange={(value) => setFormData({ ...formData, facilityId: value })}
+                    disabled={isLoadingFacilities}
                   >
                     <SelectTrigger className="pl-10">
-                      <SelectValue placeholder="Choose a facility" />
+                      <SelectValue placeholder={isLoadingFacilities ? "Loading facilities..." : "Choose a facility"} />
                     </SelectTrigger>
                     <SelectContent>
                       {facilities.map((facility) => (
                         <SelectItem key={facility._id} value={facility._id}>
-                          {facility.name} - {facility.type}
+                          {facility.name} - {facility.type} {facility.hourlyRate ? `($${facility.hourlyRate}/hr)` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -190,11 +227,10 @@ export function CreateEvent() {
                 </div>
               </div>
 
-              {/* Date and Time */}
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="date">Event Date *</Label>
-                  <div className="relative">
+                  <div className="relative mt-2">
                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <Input
                       id="date"
@@ -209,7 +245,7 @@ export function CreateEvent() {
                 </div>
                 <div>
                   <Label htmlFor="startTime">Start Time *</Label>
-                  <div className="relative">
+                  <div className="relative mt-2">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <Input
                       id="startTime"
@@ -223,7 +259,7 @@ export function CreateEvent() {
                 </div>
                 <div>
                   <Label htmlFor="endTime">End Time *</Label>
-                  <div className="relative">
+                  <div className="relative mt-2">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <Input
                       id="endTime"
@@ -237,10 +273,9 @@ export function CreateEvent() {
                 </div>
               </div>
 
-              {/* Expected Attendees */}
               <div>
                 <Label htmlFor="expectedAttendees">Expected Number of Attendees</Label>
-                <div className="relative">
+                <div className="relative mt-2">
                   <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
                     id="expectedAttendees"
@@ -341,8 +376,9 @@ export function CreateEvent() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/events')}
                   className="flex-1"
+                  disabled={loading}
                 >
                   Cancel
                 </Button>

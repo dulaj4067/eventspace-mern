@@ -33,6 +33,10 @@ const eventSchema = new Schema({
     type: String,
     trim: true
   },
+  image: {
+    type: String,
+    default: null
+  },
   organizer: {
     type: Schema.Types.ObjectId,
     ref: 'User',

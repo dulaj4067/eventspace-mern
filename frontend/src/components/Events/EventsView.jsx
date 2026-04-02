@@ -1,12 +1,14 @@
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Calendar, Clock, MapPin, Search, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, Search, Users, Plus } from 'lucide-react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getEventImage } from '../../services/eventService';
+import { ModernPagination } from '../common/ModernPagination.jsx';
 
 export function EventsView({
   events,
@@ -19,15 +21,33 @@ export function EventsView({
   viewMode,
   onViewModeChange,
 }) {
+  const ITEMS_PER_PAGE = 9;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, viewMode]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / ITEMS_PER_PAGE));
+  
+  const paginatedEvents = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredEvents.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredEvents, currentPage]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl mb-4">Community Events</h1>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto">
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
               Discover and join exciting events happening in your community
             </p>
+            <Link to="/create-event" className="inline-flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors shadow-lg">
+              <Plus className="w-5 h-5" />
+              Add Event
+            </Link>
           </div>
         </div>
       </div>
@@ -109,12 +129,12 @@ export function EventsView({
           <>
             <div className="mb-4">
               <p className="text-gray-600">
-                Showing {filteredEvents.length} of {events.length} events
+                Showing {Math.min(filteredEvents.length, ITEMS_PER_PAGE)} of {filteredEvents.length} events
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEvents.map((event) => (
+              {paginatedEvents.map((event) => (
                 <Card key={event._id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="relative h-48 bg-gradient-to-r from-blue-400 to-purple-400">
                     <img
@@ -161,6 +181,14 @@ export function EventsView({
                 </Card>
               ))}
             </div>
+
+            {totalPages > 1 && (
+              <ModernPagination 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </>
         )}
 

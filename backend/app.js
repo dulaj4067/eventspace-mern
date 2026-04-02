@@ -18,12 +18,15 @@ const paymentRoutes = require("./routers/PaymentRoutes");
 //const paymentLogsRoutes = require("./routers/paymentLogsRoutes");
 const locationRoutes = require("./routers/LocationRoutes");
 const communityCenterRoutes = require("./routers/CommunityCenterRoutes");
+const uploadRoutes = require("./routers/UploadRoutes");
+const path = require("path");
 
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use("/api/users", userRoutes);
@@ -41,6 +44,7 @@ app.use("/api/events", eventRoutes);
 //app.use("/api/admins", adminRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/upload", uploadRoutes);
 //app.use("/api/payment-logs", paymentLogsRoutes);
 
 
@@ -53,13 +57,13 @@ app.get("/", (req, res) => {
 mongoose.connect(
     process.env.MONGODB_URI || "mongodb+srv://admin:U4QUAjyNc3bfNRKx@cluster0.sjyibwg.mongodb.net/eventspace?retryWrites=true&w=majority"
 )
-.then(() => console.log("Connected to MongoDB"))
-.then(() => {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
-})
-.catch((err) => console.log("MongoDB connection error:", err));
+    .then(() => console.log("Connected to MongoDB"))
+    .then(() => {
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    })
+    .catch((err) => console.log("MongoDB connection error:", err));
 
 module.exports = app;
