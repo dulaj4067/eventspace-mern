@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Calendar, Clock, MapPin, Search, Users, Plus } from 'lucide-react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getEventImage } from '../../services/eventService';
 import { ModernPagination } from '../common/ModernPagination.jsx';
 
 export function EventsView({
@@ -136,9 +137,11 @@ export function EventsView({
               {paginatedEvents.map((event) => (
                 <Card key={event._id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="relative h-48 bg-gradient-to-r from-blue-400 to-purple-400">
-                    {event.image && (
-                      <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
-                    )}
+                    <img
+                      src={event.image || getEventImage(event.type)}
+                      alt={event.name}
+                      className="w-full h-full object-cover"
+                    />
                     <Badge className="absolute top-3 right-3 bg-white text-gray-900">
                       {event.type}
                     </Badge>
