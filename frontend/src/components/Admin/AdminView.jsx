@@ -1,6 +1,7 @@
 import {
   CheckCircle,
   DollarSign,
+  Trash2,         // ✅ ADDED: Trash2 icon for delete button
   TrendingUp,
   Users,
   XCircle,
@@ -29,9 +30,10 @@ export function AdminView({
   facilities,
   onApproveBooking,
   onRejectBooking,
+  onDeleteBooking,         // ✅ ADDED: delete handler prop
   confirmedBookingsByFacilityId,
-  statusFilter,            // ✅ active filter value
-  onStatusFilterChange,    // ✅ change filter callback
+  statusFilter,
+  onStatusFilterChange,
 }) {
   const { payments, loading, updateStatus, processPayment, deletePayment } = useAdminPaymentsState();
 
@@ -70,8 +72,8 @@ export function AdminView({
                       onClick={() => onStatusFilterChange(filter.value)}
                       className={`px-4 py-1.5 rounded-full text-sm border transition-colors
                         ${statusFilter === filter.value
-                          ? 'bg-purple-700 text-white border-purple-700'         // active
-                          : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600' // inactive
+                          ? 'bg-purple-700 text-white border-purple-700'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600'
                         }`}
                     >
                       {filter.label}
@@ -123,28 +125,42 @@ export function AdminView({
                           </div>
                         </div>
 
-                        {/* Approve/Reject — only for pending bookings */}
-                        {booking.status === 'pending' && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => onApproveBooking(booking._id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => onRejectBooking(booking._id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                          </div>
-                        )}
+                        {/* Action buttons — right side */}
+                        <div className="flex gap-2">
+                          {/* Approve/Reject — only for pending bookings */}
+                          {booking.status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => onApproveBooking(booking._id)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onRejectBooking(booking._id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
+
+                          {/* ✅ ADDED: Delete button — available on ALL bookings for admin */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onDeleteBooking(booking._id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
