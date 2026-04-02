@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard, Trash2, Search, X } from 'lucide-react';
+import { CreditCard, Trash2, Search, X, ImageIcon, ZoomIn } from 'lucide-react';
 import { Badge } from '../ui/badge.jsx';
 import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
@@ -19,15 +19,16 @@ const TYPE_STYLES = {
 const ALL_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
 
 export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }) {
-  const [refundModal, setRefundModal] = useState(null);
+  const [refundModal, setRefundModal]   = useState(null);
   const [refundReason, setRefundReason] = useState('');
+  const [slipModal, setSlipModal]       = useState(null); // holds bankSlipUrl string
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [typeFilter, setTypeFilter]   = useState('all');
+  const [dateFrom, setDateFrom]       = useState('');
+  const [dateTo, setDateTo]           = useState('');
 
   const handleStatusChange = (paymentId, currentStatus, newStatus) => {
     if (newStatus === 'refunded') {
@@ -62,24 +63,16 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
 
   const hasActiveFilters = searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || dateFrom || dateTo;
 
-  // Filter payments
   const filteredPayments = useMemo(() => {
     return payments.filter((payment) => {
-      // Search by user name or email
       if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const name = payment.userId?.name?.toLowerCase() ?? '';
+        const q     = searchQuery.toLowerCase();
+        const name  = payment.userId?.name?.toLowerCase()  ?? '';
         const email = payment.userId?.email?.toLowerCase() ?? '';
         if (!name.includes(q) && !email.includes(q)) return false;
       }
-
-      // Status filter
       if (statusFilter !== 'all' && payment.paymentStatus !== statusFilter) return false;
-
-      // Type filter
-      if (typeFilter !== 'all' && payment.paymentType !== typeFilter) return false;
-
-      // Date range filter
+      if (typeFilter   !== 'all' && payment.paymentType   !== typeFilter)   return false;
       if (dateFrom) {
         const from = new Date(dateFrom);
         from.setHours(0, 0, 0, 0);
@@ -90,7 +83,6 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
         to.setHours(23, 59, 59, 999);
         if (new Date(payment.createdAt) > to) return false;
       }
-
       return true;
     });
   }, [payments, searchQuery, statusFilter, typeFilter, dateFrom, dateTo]);
@@ -117,9 +109,8 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
         </CardHeader>
         <CardContent>
 
-          {/* Filters */}
+          {/* ── Filters ──────────────────────────────────────────────────────── */}
           <div className="bg-gray-50 border rounded-lg p-4 mb-6 space-y-3">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -131,9 +122,7 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
               />
             </div>
 
-            {/* Dropdowns + Date range */}
             <div className="flex flex-wrap gap-3">
-              {/* Status */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -141,13 +130,10 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
               >
                 <option value="all">All Statuses</option>
                 {ALL_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </option>
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
 
-              {/* Type */}
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
@@ -158,7 +144,6 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                 <option value="event-registration">🎟 Event Registration</option>
               </select>
 
-              {/* Date from */}
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-500 whitespace-nowrap">From</label>
                 <input
@@ -169,7 +154,6 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                 />
               </div>
 
-              {/* Date to */}
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-500 whitespace-nowrap">To</label>
                 <input
@@ -180,7 +164,6 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                 />
               </div>
 
-              {/* Clear filters */}
               {hasActiveFilters && (
                 <Button
                   variant="outline"
@@ -194,13 +177,12 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
               )}
             </div>
 
-            {/* Results count */}
             <p className="text-xs text-gray-400">
               Showing {filteredPayments.length} of {payments.length} payments
             </p>
           </div>
 
-          {/* Payments list */}
+          {/* ── Payments list ─────────────────────────────────────────────────── */}
           {filteredPayments.length === 0 ? (
             <p className="text-center text-gray-500 py-8">
               {hasActiveFilters ? 'No payments match your filters.' : 'No payments found.'}
@@ -212,8 +194,9 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                   key={payment._id}
                   className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    {/* Left: Info */}
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+
+                    {/* ── Left: Info ─────────────────────────────────────────── */}
                     <div className="flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className={TYPE_STYLES[payment.paymentType] ?? 'bg-gray-100 text-gray-700'}>
@@ -222,6 +205,9 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                         <Badge className={STATUS_STYLES[payment.paymentStatus] ?? 'bg-gray-100 text-gray-700'}>
                           {payment.paymentStatus.charAt(0).toUpperCase() + payment.paymentStatus.slice(1)}
                         </Badge>
+                        {payment.paymentMethod === 'bank' && (
+                          <Badge className="bg-indigo-100 text-indigo-700">🏦 Bank Transfer</Badge>
+                        )}
                       </div>
 
                       <div className="text-sm text-gray-700 space-y-1">
@@ -252,9 +238,49 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                           </p>
                         )}
                       </div>
+
+                      {/* ── Bank slip section ─────────────────────────────────── */}
+                      {payment.paymentMethod === 'bank' && (
+                        <div className="mt-3">
+                          {payment.bankSlipUrl ? (
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => setSlipModal(payment.bankSlipUrl)}
+                                className="relative group w-20 h-14 rounded-lg overflow-hidden border-2 border-indigo-200 hover:border-indigo-400 transition-colors flex-shrink-0"
+                                title="View full slip"
+                              >
+                                <img
+                                  src={payment.bankSlipUrl}
+                                  alt="Bank slip"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn className="w-5 h-5 text-white" />
+                                </div>
+                              </button>
+                              <div>
+                                <p className="text-xs font-semibold text-indigo-700">Bank Slip Uploaded</p>
+                                <button
+                                  onClick={() => setSlipModal(payment.bankSlipUrl)}
+                                  className="text-xs text-indigo-500 hover:text-indigo-700 underline underline-offset-2"
+                                >
+                                  View full image
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                              <ImageIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                              <p className="text-xs text-yellow-700">
+                                <strong>No slip uploaded.</strong> User has not submitted a payment slip yet.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Right: Amount + Actions */}
+                    {/* ── Right: Amount + Actions ────────────────────────────── */}
                     <div className="flex flex-col items-end gap-2">
                       <p className={`text-2xl font-semibold ${
                         payment.paymentStatus === 'refunded'  ? 'text-orange-500 line-through' :
@@ -266,7 +292,6 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                         {new Date(payment.createdAt).toLocaleDateString()}
                       </p>
 
-                      {/* Status dropdown */}
                       <select
                         value={payment.paymentStatus}
                         onChange={(e) =>
@@ -299,7 +324,43 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
         </CardContent>
       </Card>
 
-      {/* Refund Reason Modal */}
+      {/* ── Bank Slip Lightbox ─────────────────────────────────────────────────── */}
+      {slipModal && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setSlipModal(null)}
+        >
+          <div
+            className="relative bg-white rounded-2xl overflow-hidden shadow-2xl max-w-2xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b bg-gray-50">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-semibold text-gray-700">Bank Transfer Slip</span>
+              </div>
+              <button
+                onClick={() => setSlipModal(null)}
+                className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Image */}
+            <div className="bg-gray-100 flex items-center justify-center p-4 max-h-[75vh] overflow-auto">
+              <img
+                src={slipModal}
+                alt="Bank transfer slip"
+                className="max-w-full rounded-lg shadow"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Refund Reason Modal ───────────────────────────────────────────────── */}
       {refundModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
@@ -315,13 +376,8 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
               onChange={(e) => setRefundReason(e.target.value)}
             />
             <div className="flex gap-3 mt-4 justify-end">
-              <Button variant="outline" onClick={() => setRefundModal(null)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmRefund}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-              >
+              <Button variant="outline" onClick={() => setRefundModal(null)}>Cancel</Button>
+              <Button onClick={confirmRefund} className="bg-orange-500 hover:bg-orange-600 text-white">
                 Confirm Refund
               </Button>
             </div>

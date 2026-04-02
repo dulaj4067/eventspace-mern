@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { ArrowLeft, Users, DollarSign, Check } from 'lucide-react';
 import { Button } from '../ui/button.jsx';
@@ -8,10 +8,10 @@ import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Badge } from '../ui/badge.jsx';
 import { toast } from 'sonner';
+import { PaymentModal } from './PaymentModal.jsx'; // ← import from separate file
 
 const EXTERNAL_CENTERS_STORAGE_KEY = 'externalCommunityCenters';
 
-// Time slots HH:MM format to match backend regex
 const timeSlots = [
   '06:00','07:00','08:00','09:00','10:00','11:00',
   '12:00','13:00','14:00','15:00','16:00','17:00',
@@ -31,59 +31,47 @@ export function FacilityDetail() {
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
 
   const [formData, setFormData] = useState({
-    date: '',
-    startTime: '',
-    endTime: '',
-    purpose: '',
-    attendees: '',
+    date: '', startTime: '', endTime: '', purpose: '', attendees: '',
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const pendingBookingRef = useRef(null);
 
-  // Fetch facility
+  // ── Fetch facility ──────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
-
     const fetchFacility = async () => {
       try {
         setIsLoadingFacility(true);
         setLoadError('');
-
         if (id?.startsWith('community-')) {
-          const rawCenters = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
-          const centers = rawCenters ? JSON.parse(rawCenters) : [];
-          const externalFacility = centers.find((center) => center.id === id);
-          if (!externalFacility) throw new Error('Community center not found');
-          if (isMounted) setFacility(externalFacility);
+          const centers = JSON.parse(localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY) || '[]');
+          const found = centers.find((c) => c.id === id);
+          if (!found) throw new Error('Community center not found');
+          if (isMounted) setFacility(found);
           return;
         }
-
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/facilities/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await fetch(`/api/facilities/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const payload = await response.json();
-
-        if (!response.ok || !payload.success) {
-          throw new Error(payload.message || 'Failed to load facility details');
-        }
-
+        const payload = await res.json();
+        if (!res.ok || !payload.success) throw new Error(payload.message || 'Failed to load facility details');
         if (isMounted) setFacility(payload.data);
-      } catch (error) {
-        if (isMounted) setLoadError(error.message || 'Failed to load facility details');
+      } catch (err) {
+        if (isMounted) setLoadError(err.message || 'Failed to load facility details');
       } finally {
         if (isMounted) setIsLoadingFacility(false);
       }
     };
-
     fetchFacility();
     return () => { isMounted = false; };
   }, [id]);
 
-  // Resolve address
+  // ── Resolve address ─────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
-
     const address = [
       facility?.location?.address?.street,
       facility?.location?.address?.city,
@@ -92,208 +80,158 @@ export function FacilityDetail() {
       facility?.location?.address?.country,
     ].filter(Boolean).join(', ');
 
-    if (address) {
-      setResolvedAddress(address);
-      return undefined;
-    }
-
+    if (address) { setResolvedAddress(address); return; }
     const lat = facility?.location?.coordinates?.latitude;
     const lon = facility?.location?.coordinates?.longitude;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      setResolvedAddress('');
-      return undefined;
-    }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { setResolvedAddress(''); return; }
 
-    const resolveAddress = async () => {
+    (async () => {
       try {
-        const response = await fetch('/api/location/reverse', {
+        const res = await fetch('/api/location/reverse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ latitude: lat, longitude: lon }),
         });
-        const payload = await response.json();
-        if (!response.ok || !payload.success) return;
-        if (isMounted) {
+        const payload = await res.json();
+        if (res.ok && payload.success && isMounted)
           setResolvedAddress(payload.data.address?.displayName || payload.data.address?.street || '');
-        }
-      } catch { /* optional */ }
-    };
-
-    resolveAddress();
+      } catch {}
+    })();
     return () => { isMounted = false; };
   }, [facility]);
 
-  // Nearby places
+  // ── Nearby places ───────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const lat = facility?.location?.coordinates?.latitude;
     const lon = facility?.location?.coordinates?.longitude;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      setNearbyPlaces([]);
-      return undefined;
-    }
-
-    const fetchNearbyPlaces = async () => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { setNearbyPlaces([]); return; }
+    (async () => {
       try {
-        const response = await fetch(
+        const res = await fetch(
           `/api/location/external-places?latitude=${lat}&longitude=${lon}&searchTerm=parking&radius=2500`
         );
-        const payload = await response.json();
-        if (!response.ok || !payload.success) return;
-        if (isMounted) setNearbyPlaces((payload.data || []).slice(0, 3));
-      } catch { /* optional */ }
-    };
-
-    fetchNearbyPlaces();
+        const payload = await res.json();
+        if (res.ok && payload.success && isMounted) setNearbyPlaces((payload.data || []).slice(0, 3));
+      } catch {}
+    })();
     return () => { isMounted = false; };
   }, [facility]);
 
-  // Route info
+  // ── Route info ──────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const endLat = facility?.location?.coordinates?.latitude;
     const endLon = facility?.location?.coordinates?.longitude;
     if (!Number.isFinite(endLat) || !Number.isFinite(endLon) || !navigator.geolocation) {
       setRouteInfo(null);
-      return undefined;
+      return;
     }
-
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      async (pos) => {
         try {
-          const response = await fetch(
-            `/api/location/route?startLatitude=${position.coords.latitude}&startLongitude=${position.coords.longitude}&endLatitude=${endLat}&endLongitude=${endLon}`
+          const res = await fetch(
+            `/api/location/route?startLatitude=${pos.coords.latitude}&startLongitude=${pos.coords.longitude}&endLatitude=${endLat}&endLongitude=${endLon}`
           );
-          const payload = await response.json();
-          if (!response.ok || !payload.success) return;
-          if (isMounted) setRouteInfo(payload.data);
-        } catch { /* optional */ }
+          const payload = await res.json();
+          if (res.ok && payload.success && isMounted) setRouteInfo(payload.data);
+        } catch {}
       },
       () => { if (isMounted) setRouteInfo(null); },
       { maximumAge: 120000, timeout: 5000 }
     );
-
     return () => { isMounted = false; };
   }, [facility]);
 
+  // ── Normalized facility ─────────────────────────────────────────────────
   const normalizedFacility = useMemo(() => {
     if (!facility) return null;
-
     const image =
       facility.primaryImage ||
-      facility.images?.find((item) => item.isPrimary)?.url ||
+      facility.images?.find((i) => i.isPrimary)?.url ||
       facility.images?.[0]?.url ||
       'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
-
-    // ✅ Fixed: read hourlyRate from pricing object
-    const hourlyRate =
-      facility.pricing?.hourlyRate ||
-      facility.hourlyRate ||
-      0;
-
+    const hourlyRate = facility.pricing?.hourlyRate ?? facility.hourlyRate ?? 0;
     return {
       ...facility,
       image,
       hourlyRate,
       amenities: [
         ...(facility.amenities || []),
-        ...nearbyPlaces
-          .map((place) => place.type)
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((type) => `Nearby ${type}`),
+        ...nearbyPlaces.map((p) => p.type).filter(Boolean).slice(0, 2).map((t) => `Nearby ${t}`),
       ],
     };
   }, [facility, nearbyPlaces]);
 
-  // Get today's operating hours from backend schedule
   const todaySchedule = useMemo(() => {
     if (!normalizedFacility?.availability?.schedule) return null;
-    const day = DAY_NAMES[new Date().getDay()];
-    return normalizedFacility.availability.schedule[day] || null;
+    return normalizedFacility.availability.schedule[DAY_NAMES[new Date().getDay()]] || null;
   }, [normalizedFacility]);
 
+  // ── Duration & cost ─────────────────────────────────────────────────────
   const calculateDuration = () => {
     if (!formData.startTime || !formData.endTime) return 0;
-    const [startH, startM] = formData.startTime.split(':').map(Number);
-    const [endH, endM] = formData.endTime.split(':').map(Number);
-    return (endH + endM / 60) - (startH + startM / 60);
+    const [sH, sM] = formData.startTime.split(':').map(Number);
+    const [eH, eM] = formData.endTime.split(':').map(Number);
+    const dur = (eH + eM / 60) - (sH + sM / 60);
+    return dur > 0 ? dur : 0;
   };
 
-  const calculateCost = () => {
-    const duration = calculateDuration();
-    return duration > 0 ? duration * (normalizedFacility?.hourlyRate || 0) : 0;
-  };
+  const duration = calculateDuration();
+  const totalCost = parseFloat((duration * (normalizedFacility?.hourlyRate || 0)).toFixed(2));
+  const serviceFee = parseFloat((totalCost * 0.02).toFixed(2));
+  const grandTotal = parseFloat((totalCost + serviceFee).toFixed(2));
+  const minDate = new Date().toISOString().split('T')[0];
 
-  // ✅ Fixed: actually calls backend API
-  const handleSubmit = async (e) => {
+  // ── Form submit ─────────────────────────────────────────────────────────
+  const handleSubmit = (e) => {
     e.preventDefault();
-
     if (!formData.date || !formData.startTime || !formData.endTime || !formData.purpose) {
       toast.error('Please fill in all required fields');
       return;
     }
-
-    const duration = calculateDuration();
     if (duration <= 0) {
       toast.error('End time must be after start time');
       return;
     }
 
     const hourlyRate = normalizedFacility.hourlyRate || 0;
-    const subtotal = duration * hourlyRate;
-    const serviceFee = 0;
-    const discount = 0;
-    const total = subtotal + serviceFee - discount;
+    const subtotal = parseFloat((duration * hourlyRate).toFixed(2));
+    const fee = parseFloat((subtotal * 0.02).toFixed(2));
+    const total = parseFloat((subtotal + fee).toFixed(2));
 
-    const bookingPayload = {
+    // pricing.total must match grandTotal sent by PaymentModal — backend validates these are equal
+    pendingBookingRef.current = {
       facility: id,
       date: formData.date,
       startTime: formData.startTime,
       endTime: formData.endTime,
       purpose: formData.purpose,
-      attendees: {
-        expected: formData.attendees ? parseInt(formData.attendees) : 1
-      },
+      attendees: { expected: formData.attendees ? parseInt(formData.attendees) : 1 },
       pricing: {
         hourlyRate,
         subtotal,
-        serviceFee,
-        discount,
+        serviceFee: fee,
+        discount: 0,
         total,
       },
     };
 
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(bookingPayload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Booking failed');
-      }
-
-      toast.success('Booking request submitted successfully!');
-      setTimeout(() => navigate('/bookings'), 1500);
-    } catch (error) {
-      toast.error(error.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+    setShowPayment(true);
   };
 
-  const totalCost = calculateCost();
-  const minDate = new Date().toISOString().split('T')[0];
+  const handlePaymentComplete = (bookingId, paymentId) => {
+    pendingBookingRef.current = null;
+    toast.success('Booking confirmed! Payment processed successfully.');
+    navigate('/bookings');
+  };
 
+  const handlePaymentClose = () => {
+    pendingBookingRef.current = null;
+    setShowPayment(false);
+  };
+
+  // ── Guards ──────────────────────────────────────────────────────────────
   if (isLoadingFacility) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -327,17 +265,26 @@ export function FacilityDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <PaymentModal
+        isOpen={showPayment}
+        onClose={handlePaymentClose}
+        totalCost={totalCost}
+        duration={duration}
+        hourlyRate={normalizedFacility.hourlyRate}
+        facilityName={normalizedFacility.name}
+        onPaymentComplete={handlePaymentComplete}
+        bookingPayload={pendingBookingRef.current}
+      />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link
-          to="/facilities"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-        >
+        <Link to="/facilities" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
           <ArrowLeft className="w-4 h-4" />
           Back to facilities
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Facility Details */}
+
+          {/* Facility details */}
           <div>
             <div className="bg-white rounded-lg overflow-hidden shadow-sm">
               <img
@@ -354,23 +301,21 @@ export function FacilityDetail() {
                 </div>
 
                 <p className="text-gray-600 mb-6">{normalizedFacility.description}</p>
-                {resolvedAddress && (
-                  <p className="text-sm text-gray-500 mb-6">{resolvedAddress}</p>
-                )}
+                {resolvedAddress && <p className="text-sm text-gray-500 mb-6">{resolvedAddress}</p>}
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="flex items-center gap-2 text-gray-700">
-                    <Users className="w-5 h-5 text-purple-600" />
+                    <Users className="w-5 h-5 text-blue-600" />
                     <div>
                       <div className="text-sm text-gray-500">Capacity</div>
                       <div className="font-semibold">{normalizedFacility.capacity} people</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700">
-                    <DollarSign className="w-5 h-5 text-purple-600" />
+                    <DollarSign className="w-5 h-5 text-blue-600" />
                     <div>
                       <div className="text-sm text-gray-500">Hourly Rate</div>
-                      <div className="font-semibold">${normalizedFacility.hourlyRate}/hour</div>
+                      <div className="font-semibold">${normalizedFacility.hourlyRate}/hr</div>
                     </div>
                   </div>
                 </div>
@@ -379,10 +324,7 @@ export function FacilityDetail() {
                   <h3 className="text-lg mb-3">Amenities</h3>
                   <div className="flex flex-wrap gap-2">
                     {normalizedFacility.amenities.map((amenity) => (
-                      <div
-                        key={amenity}
-                        className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg text-sm"
-                      >
+                      <div key={amenity} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg text-sm">
                         <Check className="w-4 h-4 text-green-600" />
                         <span>{amenity}</span>
                       </div>
@@ -390,21 +332,18 @@ export function FacilityDetail() {
                   </div>
                 </div>
 
-                {/* ✅ Fixed: Real operating hours from backend */}
                 <div className="border-t pt-6">
                   <h3 className="text-lg mb-3">Operating Hours</h3>
                   {todaySchedule ? (
                     <div className="space-y-2 text-sm text-gray-600">
                       {DAY_NAMES.map((day) => {
-                        const schedule = normalizedFacility.availability?.schedule?.[day];
-                        if (!schedule) return null;
+                        const s = normalizedFacility.availability?.schedule?.[day];
+                        if (!s) return null;
                         return (
                           <div key={day} className="flex justify-between">
                             <span className="capitalize">{day}:</span>
                             <span className="font-semibold text-gray-900">
-                              {schedule.isOpen
-                                ? `${schedule.openTime} - ${schedule.closeTime}`
-                                : 'Closed'}
+                              {s.isOpen ? `${s.openTime} – ${s.closeTime}` : 'Closed'}
                             </span>
                           </div>
                         );
@@ -413,12 +352,12 @@ export function FacilityDetail() {
                   ) : (
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex justify-between">
-                        <span>Monday - Friday:</span>
-                        <span className="font-semibold text-gray-900">6:00 AM - 10:00 PM</span>
+                        <span>Monday – Friday:</span>
+                        <span className="font-semibold text-gray-900">6:00 AM – 10:00 PM</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Saturday - Sunday:</span>
-                        <span className="font-semibold text-gray-900">8:00 AM - 8:00 PM</span>
+                        <span>Saturday – Sunday:</span>
+                        <span className="font-semibold text-gray-900">8:00 AM – 8:00 PM</span>
                       </div>
                     </div>
                   )}
@@ -427,7 +366,7 @@ export function FacilityDetail() {
             </div>
           </div>
 
-          {/* Booking Form */}
+          {/* Booking form */}
           <div>
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl mb-6">Book This Facility</h2>
@@ -448,33 +387,19 @@ export function FacilityDetail() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="startTime">Start Time *</Label>
-                    <Select
-                      value={formData.startTime}
-                      onValueChange={(value) => setFormData({ ...formData, startTime: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
+                    <Select value={formData.startTime} onValueChange={(v) => setFormData({ ...formData, startTime: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
                       <SelectContent>
-                        {timeSlots.map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
+                        {timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label htmlFor="endTime">End Time *</Label>
-                    <Select
-                      value={formData.endTime}
-                      onValueChange={(value) => setFormData({ ...formData, endTime: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
+                    <Select value={formData.endTime} onValueChange={(v) => setFormData({ ...formData, endTime: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
                       <SelectContent>
-                        {timeSlots.map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
+                        {timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -506,33 +431,43 @@ export function FacilityDetail() {
                 </div>
 
                 {totalCost > 0 && (
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Estimated Cost:</span>
-                      <span className="text-2xl font-semibold text-purple-600">${totalCost}</span>
+                  <div className="rounded-xl overflow-hidden border border-blue-100">
+                    <div className="bg-blue-600 px-4 py-2.5">
+                      <span className="text-white text-sm font-semibold">Cost Estimate</span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-2">
-                      Based on {calculateDuration()} hour(s) at ${normalizedFacility.hourlyRate}/hour
-                    </p>
+                    <div className="bg-blue-50 px-4 py-3 space-y-2">
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>${normalizedFacility.hourlyRate.toFixed(2)} × {duration} hr{duration !== 1 ? 's' : ''}</span>
+                        <span>${totalCost.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Service fee (2%)</span>
+                        <span>${serviceFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-blue-200">
+                        <span>Total Due</span>
+                        <span className="text-blue-700 text-lg">${grandTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-11 text-base font-semibold"
                 >
-                  {loading ? 'Submitting...' : 'Submit Booking Request'}
+                  {loading ? 'Submitting…' : 'Proceed to Payment'}
                 </Button>
 
-                <p className="text-sm text-gray-500 text-center">
-                  Your booking request will be reviewed by our team and you'll receive a
-                  confirmation email within 24 hours.
-                  {routeInfo && ` Typical drive: ${routeInfo.duration} ${routeInfo.durationUnit}.`}
+                <p className="text-xs text-gray-400 text-center">
+                  Payment is required to confirm your booking.
+                  {routeInfo && ` Estimated drive: ${routeInfo.duration} ${routeInfo.durationUnit}.`}
                 </p>
               </form>
             </div>
           </div>
+
         </div>
       </div>
     </div>
