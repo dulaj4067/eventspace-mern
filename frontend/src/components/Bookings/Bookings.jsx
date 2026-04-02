@@ -2,7 +2,7 @@ import { BookingsView } from './BookingsView.jsx';
 import { useBookingsState } from './useBookingsState.jsx';
 
 export function Bookings() {
-  const { filteredBookings, filterStatus, setFilterStatus, stats, cancelBooking, downloadReceipt, isLoading } =
+  const { filteredBookings, filterStatus, setFilterStatus, stats, cancelBooking, downloadReceipt, deleteBooking, isLoading } =
     useBookingsState();
 
   return (
@@ -13,6 +13,7 @@ export function Bookings() {
       stats={stats}
       onCancelBooking={cancelBooking}
       onDownloadReceipt={downloadReceipt} // receipt download handler
+      onDeleteBooking={deleteBooking}      // ✅ ADDED: delete handler for cancelled bookings
       isLoading={isLoading}
     />
   );

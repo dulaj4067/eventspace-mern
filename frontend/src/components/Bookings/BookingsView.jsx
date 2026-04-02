@@ -1,5 +1,5 @@
-//import { Calendar, Clock, DollarSign, Filter, MapPin, X } from 'lucide-react';
-import { Calendar, Clock, DollarSign, Download, Filter, MapPin, X } from 'lucide-react';
+// ✅ ADDED: Trash2 icon for the delete button
+import { Calendar, Clock, DollarSign, Download, Filter, MapPin, Trash2, X } from 'lucide-react';
 import { Badge } from '../ui/badge.jsx';
 import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
@@ -13,6 +13,7 @@ export function BookingsView({
   stats,
   onCancelBooking,
   onDownloadReceipt, // receipt download handler
+  onDeleteBooking,   // ✅ ADDED: delete handler for cancelled bookings
   isLoading,
 }) {
   return (
@@ -169,6 +170,18 @@ export function BookingsView({
                           Cancel Booking
                         </Button>
                       </>
+                    )}
+                    {/* ✅ ADDED: Delete button — only shown for cancelled bookings */}
+                    {booking.status === 'cancelled' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDeleteBooking(booking._id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
                     )}
                   </div>
                 </CardContent>
