@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -21,12 +22,15 @@ const communityCenterRoutes = require("./routers/CommunityCenterRoutes");
 const uploadRoutes = require("./routers/UploadRoutes");
 const path = require("path");
 
-
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve uploaded files (bank slips, images, etc.) as static
+// Files are accessible at: http://localhost:5000/uploads/bank-slips/<filename>
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
 app.use("/api/users", userRoutes);
@@ -37,16 +41,11 @@ app.use('/api/search', searchRoutes);
 app.use("/api/admin-settings", adminSettingsRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/community-centers", communityCenterRoutes);
-
 app.use('/api/ratings', ratingRoutes);
 app.use("/api/events", eventRoutes);
-
-//app.use("/api/admins", adminRoutes);
-app.use("/api/admin-settings", adminSettingsRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/upload", uploadRoutes);
 //app.use("/api/payment-logs", paymentLogsRoutes);
-
 
 // Home route
 app.get("/", (req, res) => {

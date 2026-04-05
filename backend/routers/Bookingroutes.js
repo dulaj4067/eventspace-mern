@@ -81,7 +81,16 @@ router.patch(
 );
 
 
-// 6. DELETE BOOKING - Admin only
+/// ✅ ADDED — 6. DELETE CANCELLED BOOKING - Accessible by user (own cancelled bookings only)
+// DELETE /api/bookings/:bookingId/cancelled
+// ⚠️ Must be BEFORE the admin-only DELETE /:bookingId route
+router.delete(
+    '/:bookingId/cancelled',
+    verifyToken,
+    deleteBooking
+);
+
+// 7. DELETE BOOKING - Admin only (can delete any booking)
 // DELETE /api/bookings/:bookingId
 router.delete(
     '/:bookingId',

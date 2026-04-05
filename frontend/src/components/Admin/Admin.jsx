@@ -11,6 +11,7 @@ export function Admin() {
     error,
     approveBooking,
     rejectBooking,
+    deleteBooking,               // ✅ ADDED
     verifyFacility,
     deleteFacility,
     removeExternalFacility,
@@ -46,6 +47,7 @@ export function Admin() {
       loadingExternal={loadingExternal}
       onApproveBooking={approveBooking}
       onRejectBooking={rejectBooking}
+      onDeleteBooking={deleteBooking}          // ✅ ADDED
       onVerifyFacility={verifyFacility}
       onDeleteFacility={deleteFacility}
       onRemoveExternalFacility={removeExternalFacility}

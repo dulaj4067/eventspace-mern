@@ -50,6 +50,13 @@ const paymentSchema = new Schema({
         type: Date,
         required: false
     },
+    // ─── Bank slip ────────────────────────────────────────────────────────────
+    // Stored path/URL of the uploaded bank transfer slip image.
+    // Admin reviews this image before manually marking payment as 'completed'.
+    bankSlipUrl: {
+        type: String,
+        default: null,
+    },
     // Refund tracking
     refundedAt: {
         type: Date,
@@ -63,7 +70,11 @@ const paymentSchema = new Schema({
         type: Number,
         required: false,
         min: 0
-    }
+    },
+    stripePaymentIntentId: {
+        type: String,
+        default: null,
+    },
 }, {
     timestamps: true
 });
