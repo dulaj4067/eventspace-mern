@@ -8,7 +8,8 @@ import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Badge } from '../ui/badge.jsx';
 import { toast } from 'sonner';
-import { PaymentModal } from './PaymentModal.jsx'; // ← import from separate file
+import { PaymentModal } from './PaymentModal.jsx';
+import { FacilityRatings } from '../Rating/FacilityRatings.jsx'; // ← read-only ratings display
 
 const EXTERNAL_CENTERS_STORAGE_KEY = 'externalCommunityCenters';
 
@@ -29,6 +30,7 @@ export function FacilityDetail() {
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [routeInfo, setRouteInfo] = useState(null);
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
+  // NOTE: userBookings state removed — review submission is now in My Bookings page
 
   const [formData, setFormData] = useState({
     date: '', startTime: '', endTime: '', purpose: '', attendees: '',
@@ -38,7 +40,7 @@ export function FacilityDetail() {
   const [showPayment, setShowPayment] = useState(false);
   const pendingBookingRef = useRef(null);
 
-  // ── Fetch facility ──────────────────────────────────────────────────────
+  // ── Fetch facility ──────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const fetchFacility = async () => {
@@ -69,7 +71,7 @@ export function FacilityDetail() {
     return () => { isMounted = false; };
   }, [id]);
 
-  // ── Resolve address ─────────────────────────────────────────────────────
+  // ── Resolve address ─────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const address = [
@@ -100,7 +102,7 @@ export function FacilityDetail() {
     return () => { isMounted = false; };
   }, [facility]);
 
-  // ── Nearby places ───────────────────────────────────────────────────────
+  // ── Nearby places ───────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const lat = facility?.location?.coordinates?.latitude;
@@ -118,7 +120,7 @@ export function FacilityDetail() {
     return () => { isMounted = false; };
   }, [facility]);
 
-  // ── Route info ──────────────────────────────────────────────────────────
+  // ── Route info ──────────────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const endLat = facility?.location?.coordinates?.latitude;
@@ -143,7 +145,7 @@ export function FacilityDetail() {
     return () => { isMounted = false; };
   }, [facility]);
 
-  // ── Normalized facility ─────────────────────────────────────────────────
+  // ── Normalized facility ─────────────────────────────────────────────────────
   const normalizedFacility = useMemo(() => {
     if (!facility) return null;
     const image =
@@ -168,7 +170,7 @@ export function FacilityDetail() {
     return normalizedFacility.availability.schedule[DAY_NAMES[new Date().getDay()]] || null;
   }, [normalizedFacility]);
 
-  // ── Duration & cost ─────────────────────────────────────────────────────
+  // ── Duration & cost ─────────────────────────────────────────────────────────
   const calculateDuration = () => {
     if (!formData.startTime || !formData.endTime) return 0;
     const [sH, sM] = formData.startTime.split(':').map(Number);
@@ -183,7 +185,7 @@ export function FacilityDetail() {
   const grandTotal = parseFloat((totalCost + serviceFee).toFixed(2));
   const minDate = new Date().toISOString().split('T')[0];
 
-  // ── Form submit ─────────────────────────────────────────────────────────
+  // ── Form submit ─────────────────────────────────────────────────────────────
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.date || !formData.startTime || !formData.endTime || !formData.purpose) {
@@ -200,7 +202,6 @@ export function FacilityDetail() {
     const fee = parseFloat((subtotal * 0.02).toFixed(2));
     const total = parseFloat((subtotal + fee).toFixed(2));
 
-    // pricing.total must match grandTotal sent by PaymentModal — backend validates these are equal
     pendingBookingRef.current = {
       facility: id,
       date: formData.date,
@@ -208,13 +209,7 @@ export function FacilityDetail() {
       endTime: formData.endTime,
       purpose: formData.purpose,
       attendees: { expected: formData.attendees ? parseInt(formData.attendees) : 1 },
-      pricing: {
-        hourlyRate,
-        subtotal,
-        serviceFee: fee,
-        discount: 0,
-        total,
-      },
+      pricing: { hourlyRate, subtotal, serviceFee: fee, discount: 0, total },
     };
 
     setShowPayment(true);
@@ -231,7 +226,7 @@ export function FacilityDetail() {
     setShowPayment(false);
   };
 
-  // ── Guards ──────────────────────────────────────────────────────────────
+  // ── Guards ──────────────────────────────────────────────────────────────────
   if (isLoadingFacility) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -284,8 +279,8 @@ export function FacilityDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          {/* Facility details */}
-          <div>
+          {/* ── Left column: facility details + ratings ── */}
+          <div className="space-y-6">
             <div className="bg-white rounded-lg overflow-hidden shadow-sm">
               <img
                 src={normalizedFacility.image}
@@ -364,9 +359,16 @@ export function FacilityDetail() {
                 </div>
               </div>
             </div>
+
+            {/* ── Reviews section (read-only — submit is in My Bookings) ── */}
+            {!id?.startsWith('community-') && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <FacilityRatings facilityId={id} />
+              </div>
+            )}
           </div>
 
-          {/* Booking form */}
+          {/* ── Right column: booking form ── */}
           <div>
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl mb-6">Book This Facility</h2>
