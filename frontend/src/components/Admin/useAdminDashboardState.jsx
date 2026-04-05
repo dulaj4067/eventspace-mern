@@ -1,16 +1,125 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import {
+  EXTERNAL_CENTERS_STORAGE_KEY,
+  applyExternalOverrides,
+  loadHiddenExternalIds,
+  addHiddenExternalId,
+} from '../../utils/externalFacilityClient.js';
 
 const API_BASE = '/api';
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+
+const DEFAULT_MAP_BBOX = {
+  minLat: 40.65,
+  minLon: -74.05,
+  maxLat: 40.78,
+  maxLon: -73.92,
+};
+
+function getGoogleStreetViewImage(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !GOOGLE_MAPS_API_KEY) {
+    return null;
+  }
+  return `https://maps.googleapis.com/maps/api/streetview?size=1200x700&location=${latitude},${longitude}&fov=90&heading=235&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+}
+
+function getLocationMapSnapshot(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
+  }
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${latitude},${longitude}&zoom=16&size=1200x700&markers=${latitude},${longitude},red-pushpin`;
+}
+
+function mapCommunityCenter(center) {
+  const latitude = Number.parseFloat(center.latitude);
+  const longitude = Number.parseFloat(center.longitude);
+  const googleStreetViewImage = getGoogleStreetViewImage(latitude, longitude);
+  const locationMapImage = getLocationMapSnapshot(latitude, longitude);
+  const addressText = center.address || 'Community center location';
+
+  return {
+    id: `community-${center.id}`,
+    _id: `community-${center.id}`,
+    name: center.name || 'Community Center',
+    type: 'Community Center',
+    capacity: 80,
+    amenities: [center.operator ? `Operator: ${center.operator}` : 'Public community space'],
+    hourlyRate: 20,
+    image: googleStreetViewImage || locationMapImage,
+    description: `${addressText}. Real-world community center sourced from OpenStreetMap data.`,
+    available: true,
+    coordinates: [latitude, longitude],
+    address: {},
+    location: {
+      address: {},
+      coordinates: { latitude, longitude },
+    },
+    images: [
+      {
+        url: googleStreetViewImage || locationMapImage,
+        isPrimary: true,
+      },
+    ],
+    isExternal: true,
+  };
+}
+
+function computeBoundingBoxFromMongoFacilities(facilities) {
+  const points = facilities
+    .map((f) => {
+      const lat = f.location?.coordinates?.latitude;
+      const lon = f.location?.coordinates?.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+      return [lat, lon];
+    })
+    .filter(Boolean);
+
+  if (points.length === 0) return null;
+
+  const lats = points.map((p) => p[0]);
+  const lons = points.map((p) => p[1]);
+  const pad = 0.06;
+  return {
+    minLat: Math.min(...lats) - pad,
+    minLon: Math.min(...lons) - pad,
+    maxLat: Math.max(...lats) + pad,
+    maxLon: Math.max(...lons) + pad,
+  };
+}
+
+function expandBoundingBox(box, pad = 0.2) {
+  return {
+    minLat: box.minLat - pad,
+    minLon: box.minLon - pad,
+    maxLat: box.maxLat + pad,
+    maxLon: box.maxLon + pad,
+  };
+}
+
+async function fetchCommunityCentersForBox(box) {
+  const response = await fetch(
+    `/api/community-centers?minLat=${box.minLat}&minLon=${box.minLon}&maxLat=${box.maxLat}&maxLon=${box.maxLon}`,
+  );
+  const payload = await response.json();
+  if (!response.ok || !payload.success) {
+    return [];
+  }
+  return payload.data || [];
+}
 
 export function useAdminDashboardState() {
   const [bookings, setBookings] = useState([]);
   const [facilities, setFacilities] = useState([]);
+  const [externalCenters, setExternalCenters] = useState([]);
+  const [loadingExternal, setLoadingExternal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // ✅ Status filter state — empty string means "All" (no filter)
   const [statusFilter, setStatusFilter] = useState('');
+  const [facilityFilter, setFacilityFilter] = useState('all');
+  const externalFetchDoneRef = useRef(false);
 
   // ─── Fetch bookings ──────────────────────────────────────────────────────
   // Extracted into its own function so it can be re-called when statusFilter changes
@@ -35,7 +144,7 @@ export function useAdminDashboardState() {
     }
   }, [statusFilter]); // ✅ re-runs whenever statusFilter changes
 
-  // ─── Fetch bookings & facilities on mount ────────────────────────────────
+  // ─── Fetch bookings & facilities on mount (parallel; real-world loads on demand) ─
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -47,15 +156,21 @@ export function useAdminDashboardState() {
           Authorization: `Bearer ${token}`,
         };
 
-        // ✅ Fetch facilities once on mount (no filter needed)
-        const facilitiesRes = await fetch(`${API_BASE}/facilities`, { headers });
+        const [facilitiesRes, bookingsRes] = await Promise.all([
+          fetch(`${API_BASE}/facilities?limit=500`, { headers }),
+          fetch(`${API_BASE}/bookings`, { headers }),
+        ]);
+
         if (!facilitiesRes.ok) throw new Error('Failed to fetch facilities');
+        if (!bookingsRes.ok) throw new Error('Failed to fetch bookings');
 
-        const facilitiesData = await facilitiesRes.json();
+        const [facilitiesData, bookingsData] = await Promise.all([
+          facilitiesRes.json(),
+          bookingsRes.json(),
+        ]);
+
         setFacilities(facilitiesData.data ?? []);
-
-        // ✅ Fetch bookings (respects current statusFilter)
-        await fetchBookings();
+        setBookings(bookingsData.data ?? []);
       } catch (err) {
         setError(err.message);
         toast.error(err.message || 'Failed to load data');
@@ -66,6 +181,45 @@ export function useAdminDashboardState() {
 
     fetchData();
   }, []); // runs once on mount
+
+  const loadExternalCenters = useCallback(async () => {
+    if (externalFetchDoneRef.current) return;
+    externalFetchDoneRef.current = true;
+    setLoadingExternal(true);
+    try {
+      const list = facilities;
+      let box = computeBoundingBoxFromMongoFacilities(list);
+      if (!box) box = DEFAULT_MAP_BBOX;
+      let centers = await fetchCommunityCentersForBox(box);
+      if (!centers.length) {
+        centers = await fetchCommunityCentersForBox(expandBoundingBox(box));
+      }
+      const mapped = centers
+        .filter((center) => {
+          const lat = Number.parseFloat(center.latitude);
+          const lon = Number.parseFloat(center.longitude);
+          return Number.isFinite(lat) && Number.isFinite(lon);
+        })
+        .map(mapCommunityCenter);
+      if (mapped.length > 0) {
+        localStorage.setItem(EXTERNAL_CENTERS_STORAGE_KEY, JSON.stringify(mapped));
+      }
+      const hidden = loadHiddenExternalIds();
+      const visible = mapped
+        .filter((f) => !hidden.has(f.id))
+        .map(applyExternalOverrides);
+      setExternalCenters(visible);
+    } catch {
+      const raw = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const hidden = loadHiddenExternalIds();
+      setExternalCenters(
+        parsed.filter((f) => !hidden.has(f.id)).map(applyExternalOverrides),
+      );
+    } finally {
+      setLoadingExternal(false);
+    }
+  }, [facilities]);
 
   // ✅ Re-fetch bookings whenever statusFilter changes (skip initial mount)
   const isFirstRender = useMemo(() => ({ current: true }), []);
@@ -139,6 +293,65 @@ export function useAdminDashboardState() {
     }
   }, [statusFilter]);
 
+  const verifyFacility = useCallback(async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/facilities/${id}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to approve facility');
+      }
+
+      const payload = await res.json();
+      const updated = payload.data;
+      setFacilities((prev) =>
+        prev.map((f) =>
+          f._id === id
+            ? {
+                ...f,
+                verified: true,
+                verificationDate: updated?.verificationDate ?? new Date().toISOString(),
+              }
+            : f,
+        ),
+      );
+      toast.success('Facility approved — it can appear on the facilities page.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to approve facility');
+    }
+  }, []);
+
+  const deleteFacility = useCallback(async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/facilities/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to remove listing');
+      }
+      setFacilities((prev) => prev.filter((f) => f._id !== id));
+      toast.success('Listing removed from the platform.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to remove listing');
+    }
+  }, []);
+
+  const removeExternalFacility = useCallback((facilityId) => {
+    addHiddenExternalId(facilityId);
+    setExternalCenters((prev) => prev.filter((f) => (f.id ?? f._id) !== facilityId));
+    toast.success('Real-world listing hidden from the map and admin.');
+  }, []);
+
   // ─── Stats (always computed from ALL loaded bookings) ────────────────────
   const stats = useMemo(() => {
     const confirmedBookings = bookings.filter((b) => b.status === 'confirmed');
@@ -164,13 +377,21 @@ export function useAdminDashboardState() {
   return {
     bookings,
     facilities,
+    externalCenters,
+    loadingExternal,
     stats,
     loading,
     error,
     approveBooking,
     rejectBooking,
+    verifyFacility,
+    deleteFacility,
+    removeExternalFacility,
+    loadExternalCenters,
     confirmedBookingsByFacilityId,
     statusFilter,       // ✅ expose to Admin.jsx
     setStatusFilter,    // ✅ expose to Admin.jsx
+    facilityFilter,
+    setFacilityFilter,
   };
 }

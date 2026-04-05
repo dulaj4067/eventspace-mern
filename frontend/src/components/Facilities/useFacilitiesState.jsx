@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  EXTERNAL_CENTERS_STORAGE_KEY,
+  applyExternalOverrides,
+  loadHiddenExternalIds,
+} from '../../utils/externalFacilityClient.js';
 
 const FALLBACK_COORDINATES = [40.7128, -74.006];
-const EXTERNAL_CENTERS_STORAGE_KEY = 'externalCommunityCenters';
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 function toAddressString(address = {}) {
@@ -22,7 +26,8 @@ function mapFacilityFromApi(facility) {
   const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lon);
 
   return {
-    id: facility._id,
+    id: facility.externalId || facility._id,
+    _id: facility._id,
     name: facility.name,
     type: facility.type,
     capacity: facility.capacity,
@@ -33,7 +38,7 @@ function mapFacilityFromApi(facility) {
     available: facility.availability?.status === 'available',
     coordinates: hasCoordinates ? [lat, lon] : null,
     address: facility.location?.address || {},
-    isExternal: false,
+    isExternal: !!facility.isExternal,
   };
 }
 
@@ -174,8 +179,11 @@ export function useFacilitiesState() {
           };
         });
 
+        const hiddenExternal = loadHiddenExternalIds();
         const cachedCentersRaw = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
-        const cachedCenters = cachedCentersRaw ? JSON.parse(cachedCentersRaw) : [];
+        const cachedCenters = (cachedCentersRaw ? JSON.parse(cachedCentersRaw) : [])
+          .map(applyExternalOverrides)
+          .filter((f) => !hiddenExternal.has(f.id));
         let mergedFacilities = dedupeById([...normalizedFacilities, ...cachedCenters]);
         const bbox = computeBoundingBox(normalizedFacilities);
 
@@ -199,7 +207,9 @@ export function useFacilitiesState() {
                 const lon = Number.parseFloat(center.longitude);
                 return Number.isFinite(lat) && Number.isFinite(lon);
               })
-              .map(mapCommunityCenter);
+              .map(mapCommunityCenter)
+              .map(applyExternalOverrides)
+              .filter((f) => !hiddenExternal.has(f.id));
 
             const centersToUse = mappedCenters.length > 0 ? mappedCenters : cachedCenters;
             mergedFacilities = dedupeById([...normalizedFacilities, ...centersToUse]);

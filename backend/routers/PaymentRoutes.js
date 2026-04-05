@@ -11,6 +11,7 @@ const {
     processPayment,
     processStripePayment,
     getPaymentLogs,
+    getReceivedPayments,
     deletePayment
 } = require("../controllers/PaymentController");
 const { verifyToken, isAdmin } = require("../middleware/Authmiddleware");
@@ -24,6 +25,7 @@ router.get("/event/:eventId", verifyToken, getPaymentsByEventId);
 
 // User payments
 router.get("/user/:userId", verifyToken, getPaymentsByUserId);
+router.get("/received", verifyToken, getReceivedPayments);
 
 // Venue booking payment route
 router.post("/", verifyToken, createPayment);

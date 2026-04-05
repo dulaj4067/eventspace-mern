@@ -18,7 +18,16 @@
     },
     "_id": "65f100000000000000000001",
     "name": "Orchid Conference Hall",
-    "type": "Conference Room"
+    "type": "Conference Room",
+    "description": "A beautiful and modern Orchid-themed conference hall with large windows, floral arrangements, and professional seating arrangement.",
+    "capacity": 150,
+    "hourlyRate": 100,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=800",
+        "isPrimary": true
+      }
+    ]
   },
   {
     "location": {
@@ -39,7 +48,16 @@
     },
     "_id": "699e229a320e7f3d88d17a9d",
     "name": "Grand Conference Hall",
-    "type": "Conference Room"
+    "type": "Conference Room",
+    "description": "A grand and spacious conference hall with architectural excellence, high ceilings, and wood-paneled walls.",
+    "capacity": 300,
+    "hourlyRate": 250,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800",
+        "isPrimary": true
+      }
+    ]
   },
   {
     "location": {
@@ -60,7 +78,16 @@
     },
     "_id": "699e229a320e7f3d88d17aa5",
     "name": "Skyline Meeting Room",
-    "type": "Meeting Room"
+    "type": "Meeting Room",
+    "description": "A modern meeting room on a high floor with a stunning skyline view of Colombo. Glass walls and sleek furniture.",
+    "capacity": 20,
+    "hourlyRate": 50,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=800",
+        "isPrimary": true
+      }
+    ]
   },
   {
     "location": {
@@ -81,7 +108,16 @@
     },
     "_id": "699e229a320e7f3d88d17aa0",
     "name": "Oceanview Auditorium",
-    "type": "Auditorium"
+    "type": "Auditorium",
+    "description": "A massive auditorium with state-of-the-art audio-visual equipment and a view of the Indian Ocean.",
+    "capacity": 500,
+    "hourlyRate": 400,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
+        "isPrimary": true
+      }
+    ]
   },
   {
     "location": {
@@ -102,7 +138,16 @@
     },
     "_id": "699e229a320e7f3d88d17aa7",
     "name": "Sunset Outdoor Space",
-    "type": "Outdoor Space"
+    "type": "Outdoor Space",
+    "description": "A beautiful outdoor garden area perfect for sunset weddings and parties. Large open space with lush greenery.",
+    "capacity": 200,
+    "hourlyRate": 150,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800",
+        "isPrimary": true
+      }
+    ]
   },
   {
     "location": {
@@ -123,7 +168,16 @@
     },
     "_id": "699e229a320e7f3d88d17aa3",
     "name": "Fitness Studio",
-    "type": "Fitness Center"
+    "type": "Fitness Center",
+    "description": "A fully equipped fitness studio for yoga, dance, or group workouts. Mirrored walls and wood flooring.",
+    "capacity": 30,
+    "hourlyRate": 40,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800",
+        "isPrimary": true
+      }
+    ]
   },
   {
     "location": {
@@ -143,6 +197,15 @@
     },
     "_id": "69a748a1573fff8eaa06fe32",
     "name": "Kasun's Lakeside Pavilion",
-    "type": "Outdoor Space"
+    "type": "Outdoor Space",
+    "description": "A private and peaceful pavilion by the lake. Ideal for small gatherings and quiet retreats.",
+    "capacity": 50,
+    "hourlyRate": 60,
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
+        "isPrimary": true
+      }
+    ]
   }
 ]

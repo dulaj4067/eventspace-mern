@@ -63,6 +63,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        token: localStorage.getItem('token'),
         login,
         register,
         logout,

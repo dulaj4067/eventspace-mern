@@ -5,14 +5,21 @@ export function Admin() {
   const {
     bookings,
     facilities,
-    stats,
+    externalCenters,
+    loadingExternal,
     loading,
     error,
     approveBooking,
     rejectBooking,
+    verifyFacility,
+    deleteFacility,
+    removeExternalFacility,
+    loadExternalCenters,
     confirmedBookingsByFacilityId,
-    statusFilter,        // ✅
-    setStatusFilter,     // ✅
+    statusFilter,
+    setStatusFilter,
+    facilityFilter,
+    setFacilityFilter,
   } = useAdminDashboardState();
 
   if (loading) {
@@ -35,12 +42,19 @@ export function Admin() {
     <AdminView
       bookings={bookings}
       facilities={facilities}
-      stats={stats}
+      externalCenters={externalCenters}
+      loadingExternal={loadingExternal}
       onApproveBooking={approveBooking}
       onRejectBooking={rejectBooking}
+      onVerifyFacility={verifyFacility}
+      onDeleteFacility={deleteFacility}
+      onRemoveExternalFacility={removeExternalFacility}
+      onLoadExternalCenters={loadExternalCenters}
       confirmedBookingsByFacilityId={confirmedBookingsByFacilityId}
-      statusFilter={statusFilter}            // ✅
-      onStatusFilterChange={setStatusFilter} // ✅
+      statusFilter={statusFilter}
+      onStatusFilterChange={setStatusFilter}
+      facilityFilter={facilityFilter}
+      onFacilityFilterChange={setFacilityFilter}
     />
   );
 }

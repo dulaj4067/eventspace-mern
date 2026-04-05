@@ -1,4 +1,4 @@
-import axios from 'axios';
+const axios = require('axios');
 
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
 
@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
 });
 
 // CONVERT ADDRESS TO COORDINATES (GEOCODING)
-export const geocodeAddress = async (address) => {
+const geocodeAddress = async (address) => {
   try {
     if (!address || address.trim().length === 0) {
       throw new Error('Address is required');
@@ -54,7 +54,7 @@ export const geocodeAddress = async (address) => {
 };
 
 // CONVERT COORDINATES TO ADDRESS (REVERSE GEOCODING)
-export const reverseGeocodeCoordinates = async (latitude, longitude) => {
+const reverseGeocodeCoordinates = async (latitude, longitude) => {
   try {
     if (!latitude || !longitude) {
       throw new Error('Latitude and longitude are required');
@@ -103,7 +103,7 @@ export const reverseGeocodeCoordinates = async (latitude, longitude) => {
 };
 
 // CALCULATE HAVERSINE DISTANCE BETWEEN TWO POINTS
-export const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -116,7 +116,7 @@ export const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 // FILTER AND SORT FACILITIES BY PROXIMITY
-export const findNearbyFacilities = (userLat, userLon, facilities, radiusKm = 5) => {
+const findNearbyFacilities = (userLat, userLon, facilities, radiusKm = 5) => {
   return facilities
     .map(facility => {
       if (!facility.location?.coordinates?.latitude || 
@@ -145,7 +145,7 @@ export const findNearbyFacilities = (userLat, userLon, facilities, radiusKm = 5)
 };
 
 // SEARCH FOR EXTERNAL PLACES (POI) NEAR COORDINATES
-export const searchNearbyPlaces = async (latitude, longitude, searchTerm, radius = 5000) => {
+const searchNearbyPlaces = async (latitude, longitude, searchTerm, radius = 5000) => {
   try {
     console.log(`🗺️ Searching: "${searchTerm}"`);
 
@@ -187,7 +187,7 @@ export const searchNearbyPlaces = async (latitude, longitude, searchTerm, radius
 };
 
 // GET ROUTE DISTANCE AND DURATION (OSRM)
-export const getRouteDistance = async (startLat, startLon, endLat, endLon) => {
+const getRouteDistance = async (startLat, startLon, endLat, endLon) => {
   try {
     console.log(`🗺️ Calculating route...`);
 
@@ -215,7 +215,7 @@ export const getRouteDistance = async (startLat, startLon, endLat, endLon) => {
 };
 
 // VALIDATE LATITUDE AND LONGITUDE FORMAT
-export const validateCoordinates = (latitude, longitude) => {
+const validateCoordinates = (latitude, longitude) => {
   const lat = parseFloat(latitude);
   const lon = parseFloat(longitude);
 
@@ -235,7 +235,7 @@ export const validateCoordinates = (latitude, longitude) => {
 };
 
 // GET ADDRESS SUGGESTIONS FOR AUTOCOMPLETE
-export const getAddressSuggestions = async (query) => {
+const getAddressSuggestions = async (query) => {
   try {
     if (!query || query.trim().length < 3) {
       return [];
@@ -265,4 +265,15 @@ export const getAddressSuggestions = async (query) => {
     console.error('Autocomplete error:', error.message);
     return [];
   }
+};
+
+module.exports = {
+  geocodeAddress,
+  reverseGeocodeCoordinates,
+  calculateHaversineDistance,
+  findNearbyFacilities,
+  searchNearbyPlaces,
+  getRouteDistance,
+  validateCoordinates,
+  getAddressSuggestions
 };

@@ -1,15 +1,11 @@
-import {
-  CheckCircle,
-  DollarSign,
-  TrendingUp,
-  Users,
-  XCircle,
-} from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '../ui/badge.jsx';
 import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs.jsx';
 import { getBookingStatusClassName, getBookingStatusLabel } from '../common/bookingStatus.jsx';
+import { AdminFacilitiesTab } from './AdminFacilitiesTab.jsx';
 import { AdminPaymentsTab } from './AdminPaymentsTab.jsx';
 import { useAdminPaymentsState } from './useAdminPaymentsState.jsx';
 import { RevenueTrackingTab } from './RevenueTrackingTab.jsx';
@@ -27,13 +23,22 @@ const STATUS_FILTERS = [
 export function AdminView({
   bookings,
   facilities,
+  externalCenters,
+  loadingExternal,
   onApproveBooking,
   onRejectBooking,
+  onVerifyFacility,
+  onDeleteFacility,
+  onRemoveExternalFacility,
+  onLoadExternalCenters,
   confirmedBookingsByFacilityId,
-  statusFilter,            // ✅ active filter value
-  onStatusFilterChange,    // ✅ change filter callback
+  statusFilter,
+  onStatusFilterChange,
+  facilityFilter,
+  onFacilityFilterChange,
 }) {
   const { payments, loading, updateStatus, processPayment, deletePayment } = useAdminPaymentsState();
+  const [dashTab, setDashTab] = useState('bookings');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,7 +52,14 @@ export function AdminView({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="bookings" className="w-full">
+        <Tabs
+          value={dashTab}
+          onValueChange={(v) => {
+            setDashTab(v);
+            if (v === 'facilities') onLoadExternalCenters?.();
+          }}
+          className="w-full"
+        >
           <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="bookings">Manage Bookings</TabsTrigger>
             <TabsTrigger value="facilities">Facilities</TabsTrigger>
@@ -153,58 +165,19 @@ export function AdminView({
             </Card>
           </TabsContent>
 
-          {/* Facilities Tab — unchanged */}
           <TabsContent value="facilities" className="mt-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl">Facilities Overview</h2>
-                    <p className="text-gray-600">View and manage community facilities</p>
-                  </div>
-                  <Button>Add New Facility</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {facilities.length === 0 && (
-                    <p className="text-gray-500 text-center py-8 col-span-2">No facilities found.</p>
-                  )}
-                  {facilities.map((facility) => {
-                    const facilityBookings = confirmedBookingsByFacilityId.get(facility._id) ?? 0;
-                    return (
-                      <div key={facility._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex gap-4">
-                          <img src={facility.image} alt={facility.name} className="w-24 h-24 rounded-lg object-cover" />
-                          <div className="flex-1">
-                            <h3 className="text-lg mb-1">{facility.name}</h3>
-                            <Badge variant="secondary" className="mb-2">{facility.type}</Badge>
-                            <div className="space-y-1 text-sm text-gray-600">
-                              <div className="flex items-center gap-2">
-                                <Users className="w-4 h-4" />
-                                <span>{facility.capacity} people</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <DollarSign className="w-4 h-4" />
-                                <span>${facility.hourlyRate}/hour</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4" />
-                                <span>{facilityBookings} confirmed bookings</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">Edit</Button>
-                          <Button variant="outline" size="sm" className="flex-1">View Details</Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            <AdminFacilitiesTab
+              facilities={facilities}
+              externalCenters={externalCenters}
+              loadingExternal={loadingExternal}
+              confirmedBookingsByFacilityId={confirmedBookingsByFacilityId}
+              facilityFilter={facilityFilter}
+              onFacilityFilterChange={onFacilityFilterChange}
+              onVerifyFacility={onVerifyFacility}
+              onDeleteFacility={onDeleteFacility}
+              onRemoveExternalFacility={onRemoveExternalFacility}
+              onLoadExternalCenters={onLoadExternalCenters}
+            />
           </TabsContent>
 
           {/* Payments Tab — unchanged */}

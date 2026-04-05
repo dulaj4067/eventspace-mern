@@ -8,8 +8,8 @@ import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Badge } from '../ui/badge.jsx';
 import { toast } from 'sonner';
-
-const EXTERNAL_CENTERS_STORAGE_KEY = 'externalCommunityCenters';
+import { FacilityImage } from '../common/FacilityImage.jsx';
+import { EXTERNAL_CENTERS_STORAGE_KEY, loadExternalOverrides } from '../../utils/externalFacilityClient.js';
 
 // Time slots HH:MM format to match backend regex
 const timeSlots = [
@@ -19,6 +19,7 @@ const timeSlots = [
 ];
 
 const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const FALLBACK_URL = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
 
 export function FacilityDetail() {
   const { id } = useParams();
@@ -28,7 +29,6 @@ export function FacilityDetail() {
   const [loadError, setLoadError] = useState('');
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [routeInfo, setRouteInfo] = useState(null);
-  const [nearbyPlaces, setNearbyPlaces] = useState([]);
 
   const [formData, setFormData] = useState({
     date: '',
@@ -54,7 +54,8 @@ export function FacilityDetail() {
           const centers = rawCenters ? JSON.parse(rawCenters) : [];
           const externalFacility = centers.find((center) => center.id === id);
           if (!externalFacility) throw new Error('Community center not found');
-          if (isMounted) setFacility(externalFacility);
+          const override = loadExternalOverrides()[id];
+          if (isMounted) setFacility(override ? { ...externalFacility, ...override } : externalFacility);
           return;
         }
 
@@ -123,30 +124,7 @@ export function FacilityDetail() {
     return () => { isMounted = false; };
   }, [facility]);
 
-  // Nearby places
-  useEffect(() => {
-    let isMounted = true;
-    const lat = facility?.location?.coordinates?.latitude;
-    const lon = facility?.location?.coordinates?.longitude;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      setNearbyPlaces([]);
-      return undefined;
-    }
 
-    const fetchNearbyPlaces = async () => {
-      try {
-        const response = await fetch(
-          `/api/location/external-places?latitude=${lat}&longitude=${lon}&searchTerm=parking&radius=2500`
-        );
-        const payload = await response.json();
-        if (!response.ok || !payload.success) return;
-        if (isMounted) setNearbyPlaces((payload.data || []).slice(0, 3));
-      } catch { /* optional */ }
-    };
-
-    fetchNearbyPlaces();
-    return () => { isMounted = false; };
-  }, [facility]);
 
   // Route info
   useEffect(() => {
@@ -179,12 +157,6 @@ export function FacilityDetail() {
   const normalizedFacility = useMemo(() => {
     if (!facility) return null;
 
-    const image =
-      facility.primaryImage ||
-      facility.images?.find((item) => item.isPrimary)?.url ||
-      facility.images?.[0]?.url ||
-      'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
-
     // ✅ Fixed: read hourlyRate from pricing object
     const hourlyRate =
       facility.pricing?.hourlyRate ||
@@ -193,18 +165,12 @@ export function FacilityDetail() {
 
     return {
       ...facility,
-      image,
       hourlyRate,
       amenities: [
         ...(facility.amenities || []),
-        ...nearbyPlaces
-          .map((place) => place.type)
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((type) => `Nearby ${type}`),
       ],
     };
-  }, [facility, nearbyPlaces]);
+  }, [facility]);
 
   // Get today's operating hours from backend schedule
   const todaySchedule = useMemo(() => {
@@ -246,6 +212,8 @@ export function FacilityDetail() {
     const discount = 0;
     const total = subtotal + serviceFee - discount;
 
+    const isExternal = id?.startsWith('community-') || id?.startsWith('external-');
+    
     const bookingPayload = {
       facility: id,
       date: formData.date,
@@ -263,6 +231,39 @@ export function FacilityDetail() {
         total,
       },
     };
+
+    if (isExternal) {
+      // Ensure data is properly formatted for the backend Facility model
+      bookingPayload.externalFacilityData = {
+        name: normalizedFacility.name,
+        type: normalizedFacility.type || 'Community Center',
+        description: normalizedFacility.description || 'No description available.',
+        capacity: normalizedFacility.capacity || 50,
+        hourlyRate: normalizedFacility.hourlyRate || 0,
+        amenities: normalizedFacility.amenities || [],
+        images: normalizedFacility.images || [{ url: normalizedFacility.image, isPrimary: true }],
+        location: normalizedFacility.location || {
+            coordinates: {
+                latitude: normalizedFacility.coordinates?.[0],
+                longitude: normalizedFacility.coordinates?.[1]
+            }
+        },
+        availability: normalizedFacility.availability || {
+          status: 'available',
+          schedule: {
+            monday: { isOpen: true, openTime: '06:00',  closeTime: '22:00' },
+            tuesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            wednesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            thursday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            friday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            saturday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            sunday: { isOpen: true, openTime: '06:00', closeTime: '22:00' }
+          }
+        },
+        isActive: true,
+        verified: true
+      };
+    }
 
     try {
       setLoading(true);
@@ -340,9 +341,8 @@ export function FacilityDetail() {
           {/* Facility Details */}
           <div>
             <div className="bg-white rounded-lg overflow-hidden shadow-sm">
-              <img
-                src={normalizedFacility.image}
-                alt={normalizedFacility.name}
+              <FacilityImage
+                facility={normalizedFacility}
                 className="w-full h-64 lg:h-96 object-cover"
               />
               <div className="p-6">

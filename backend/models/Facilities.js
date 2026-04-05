@@ -23,6 +23,7 @@ const facilitySchema = new Schema({
       'Outdoor Space',
       'Sports Facility',
       'Multipurpose Hall',
+      'Community Center',
       'Other'
     ]
   },
@@ -142,7 +143,15 @@ const facilitySchema = new Schema({
   owner: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
+  },
+  isExternal: {
+    type: Boolean,
+    default: false
+  },
+  externalId: {
+    type: String,
+    sparse: true
   },
   verified: {
     type: Boolean,

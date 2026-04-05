@@ -10,7 +10,8 @@ const {
     deleteUser,
     bulkCreateUsers,
     bulkUpdateUsers,
-    bulkDeleteUsers
+    bulkDeleteUsers,
+    getCurrentUser
 } = require("../controllers/Usercontroller");
 
 
@@ -22,6 +23,10 @@ router.post("/login", loginUser);
 
 // Get all users
 router.get("/", getAllUsers);
+
+// Get current user (token-based)
+const { verifyToken } = require("../middleware/Authmiddleware");
+router.get("/me", verifyToken, getCurrentUser);
 
 // Get user by ID
 router.get("/:id", getUserById);
