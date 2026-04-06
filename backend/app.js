@@ -20,6 +20,7 @@ const paymentRoutes = require("./routers/PaymentRoutes");
 const locationRoutes = require("./routers/LocationRoutes");
 const communityCenterRoutes = require("./routers/CommunityCenterRoutes");
 const uploadRoutes = require("./routers/UploadRoutes");
+//const path = require("path");
 
 // Middleware
 app.use(cors());

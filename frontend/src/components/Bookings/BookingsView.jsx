@@ -1,10 +1,13 @@
 // ✅ ADDED: Trash2 icon for the delete button
-import { Calendar, Clock, DollarSign, Download, Filter, MapPin, Trash2, X } from 'lucide-react';
+// ✅ ADDED: Star icon for the review button
+import { Calendar, Clock, DollarSign, Download, Filter, MapPin, Star, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '../ui/badge.jsx';
 import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { getBookingStatusClassName, getBookingStatusLabel } from '../common/bookingStatus.jsx';
+import { ReviewModal } from '../Rating/ReviewModal.jsx'; // ← review modal (separate from receipt)
 
 export function BookingsView({
   filteredBookings,
@@ -12,12 +15,32 @@ export function BookingsView({
   onFilterStatusChange,
   stats,
   onCancelBooking,
-  onDownloadReceipt, // receipt download handler
-  onDeleteBooking,   // ✅ ADDED: delete handler for cancelled bookings
+  onDownloadReceipt, // receipt download handler — untouched
+  onDeleteBooking,   // ✅ delete handler for cancelled bookings
   isLoading,
 }) {
+  // ── Review modal state ──────────────────────────────────────────────────────
+  // Tracks which booking is currently being reviewed (null = modal closed)
+  const [reviewBooking, setReviewBooking] = useState(null);
+
+  // Tracks booking IDs that have already been reviewed this session
+  // so the "Write Review" button disappears after submitting
+  const [reviewedIds, setReviewedIds] = useState(new Set());
+
+  const handleReviewSubmitted = (bookingId) => {
+    setReviewedIds((prev) => new Set([...prev, bookingId]));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* ── Review modal — completely separate from receipt logic ── */}
+      <ReviewModal
+        booking={reviewBooking}
+        onClose={() => setReviewBooking(null)}
+        onSubmitted={handleReviewSubmitted}
+      />
+
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h1 className="text-4xl mb-2">My Bookings</h1>
@@ -95,7 +118,7 @@ export function BookingsView({
                 <CardHeader className="pb-3">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
-                      {/* ✅ Fixed: facility name from populated object */}
+                      {/* facility name from populated object */}
                       <h3 className="text-xl mb-1">
                         {booking.facility?.name || 'Facility'}
                       </h3>
@@ -125,7 +148,7 @@ export function BookingsView({
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <DollarSign className="w-4 h-4" />
-                      {/* ✅ Fixed: pricing.total instead of totalCost */}
+                      {/* pricing.total from populated booking */}
                       <span>${booking.pricing?.total}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -137,7 +160,8 @@ export function BookingsView({
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {/* ✅ Fixed: onClick added for pending cancel */}
+
+                    {/* Pending: cancel request only */}
                     {booking.status === 'pending' && (
                       <Button
                         variant="outline"
@@ -149,9 +173,11 @@ export function BookingsView({
                         Cancel Request
                       </Button>
                     )}
+
+                    {/* Confirmed: receipt + cancel + write review ── */}
                     {booking.status === 'confirmed' && (
                       <>
-                        {/* ✅ Download Receipt button — triggers print-to-PDF */}
+                        {/* Receipt button — completely untouched */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -160,6 +186,7 @@ export function BookingsView({
                           <Download className="w-4 h-4 mr-1" />
                           Download Receipt
                         </Button>
+
                         <Button
                           variant="outline"
                           size="sm"
@@ -169,9 +196,33 @@ export function BookingsView({
                           <X className="w-4 h-4 mr-1" />
                           Cancel Booking
                         </Button>
+
+                        {/* ── Write Review button ──
+                            Only shown if user hasn't reviewed this booking yet.
+                            Opens ReviewModal — has nothing to do with receipt. */}
+                        {!reviewedIds.has(booking._id) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setReviewBooking(booking)}
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                          >
+                            <Star className="w-4 h-4 mr-1" />
+                            Write Review
+                          </Button>
+                        )}
+
+                        {/* Shown after review is submitted this session */}
+                        {reviewedIds.has(booking._id) && (
+                          <span className="text-xs text-green-600 flex items-center gap-1 px-2">
+                            <Star className="w-3 h-3 fill-green-600" />
+                            Reviewed
+                          </span>
+                        )}
                       </>
                     )}
-                    {/* ✅ ADDED: Delete button — only shown for cancelled bookings */}
+
+                    {/* ✅ Cancelled: delete button only */}
                     {booking.status === 'cancelled' && (
                       <Button
                         variant="outline"
@@ -183,6 +234,7 @@ export function BookingsView({
                         Delete
                       </Button>
                     )}
+
                   </div>
                 </CardContent>
               </Card>

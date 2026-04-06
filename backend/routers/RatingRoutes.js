@@ -1,67 +1,45 @@
-
 // RatingRoutes.js
-
-
 const express = require('express');
 const router = express.Router();
 
-// CONTROLLER
 const {
     createRating,
     getRatings,
+    getFacilityRatings,
     updateRating,
     deleteRating,
-    updateRatingStatus
+    updateRatingStatus,
 } = require('../controllers/RatingController');
 
-// MIDDLEWARE
 const { verifyToken, isAdmin } = require('../middleware/Authmiddleware');
 
 
-// ROUTES
+// ── Public routes ────────────────────────────────────────────────────────────
 
-//  Create a rating
-// POST /api/ratings
-// Authenticated users only
-router.post(
-    '/',
-    verifyToken,
-    createRating
-);
+// GET /api/ratings/facility/:facilityId
+// Anyone can view approved ratings for a facility
+router.get('/facility/:facilityId', getFacilityRatings);
 
-//  Get ratings
-// GET /api/ratings
-// Optional query params: ?userId=&facilityId=&eventId=&status=
-router.get(
-    '/',
-    verifyToken, // can make public if you want everyone to see ratings
-    getRatings
-);
 
-// Update a rating (user can update their own rating)
-// PATCH /api/ratings/:id
-router.patch(
-    '/:id',
-    verifyToken,
-    updateRating
-);
+// ── Authenticated routes ─────────────────────────────────────────────────────
 
-// Delete a rating (user or admin)
-router.delete(
-    '/:id',
-    verifyToken,
-    deleteRating
-);
+// POST /api/ratings  — submit a new rating (must have a completed booking)
+router.post('/', verifyToken, createRating);
 
-// Admin: Update rating status (approve, reject, flagged)
+// GET /api/ratings   — query ratings (?userId=&facilityId=&eventId=&status=)
+router.get('/', verifyToken, getRatings);
+
+// PATCH /api/ratings/:id  — user edits their own rating
+router.patch('/:id', verifyToken, updateRating);
+
+// DELETE /api/ratings/:id
+router.delete('/:id', verifyToken, deleteRating);
+
+
+// ── Admin routes ─────────────────────────────────────────────────────────────
+
 // PATCH /api/ratings/:id/status
-router.patch(
-    '/:id/status',
-    verifyToken,
-    isAdmin,
-    updateRatingStatus
-);
+router.patch('/:id/status', verifyToken, isAdmin, updateRatingStatus);
 
 
-// EXPORT ROUTER
 module.exports = router;
