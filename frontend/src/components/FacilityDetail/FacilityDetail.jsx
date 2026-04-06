@@ -29,6 +29,7 @@ export function FacilityDetail() {
   const [loadError, setLoadError] = useState('');
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [routeInfo, setRouteInfo] = useState(null);
+  const [nearbyPlaces, setNearbyPlaces] = useState([]);
 
   const [formData, setFormData] = useState({
     date: '', startTime: '', endTime: '', purpose: '', attendees: '',
@@ -50,7 +51,7 @@ export function FacilityDetail() {
           const found = centers.find((c) => c.id === id);
           if (!found) throw new Error('Community center not found');
           const override = loadExternalOverrides()[id];
-          if (isMounted) setFacility(override ? { ...externalFacility, ...override } : found);
+          if (isMounted) setFacility(override ? { ...found, ...override } : found);
           return;
         }
         const token = localStorage.getItem('token');
@@ -202,14 +203,13 @@ export function FacilityDetail() {
 
     const isExternal = id?.startsWith('community-') || id?.startsWith('external-');
     
-    // pricing.total must match grandTotal sent by PaymentModal — backend validates these are equal
-    pendingBookingRef.current = {
+    const bookingPayload = {
       facility: id,
       date: formData.date,
       startTime: formData.startTime,
       endTime: formData.endTime,
       purpose: formData.purpose,
-      attendees: { expected: formData.attendees ? parseInt(formData.attendees) : 1 },
+      attendees: { expected: formData.attendees ? parseInt(formData.attendees, 10) : 1 },
       pricing: {
         hourlyRate,
         subtotal,
@@ -230,94 +230,31 @@ export function FacilityDetail() {
         amenities: normalizedFacility.amenities || [],
         images: normalizedFacility.images || [{ url: normalizedFacility.image, isPrimary: true }],
         location: normalizedFacility.location || {
-            coordinates: {
-                latitude: normalizedFacility.coordinates?.[0],
-                longitude: normalizedFacility.coordinates?.[1]
-            }
+          coordinates: {
+            latitude: normalizedFacility.coordinates?.[0],
+            longitude: normalizedFacility.coordinates?.[1],
+          },
         },
         availability: normalizedFacility.availability || {
           status: 'available',
           schedule: {
-            monday: { isOpen: true, openTime: '06:00',  closeTime: '22:00' },
+            monday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
             tuesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
             wednesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
             thursday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
             friday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
             saturday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
-            sunday: { isOpen: true, openTime: '06:00', closeTime: '22:00' }
-          }
+            sunday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          },
         },
         isActive: true,
-        verified: true
+        verified: true,
       };
     }
 
-    if (isExternal) {
-      // Ensure data is properly formatted for the backend Facility model
-      bookingPayload.externalFacilityData = {
-        name: normalizedFacility.name,
-        type: normalizedFacility.type || 'Community Center',
-        description: normalizedFacility.description || 'No description available.',
-        capacity: normalizedFacility.capacity || 50,
-        hourlyRate: normalizedFacility.hourlyRate || 0,
-        amenities: normalizedFacility.amenities || [],
-        images: normalizedFacility.images || [{ url: normalizedFacility.image, isPrimary: true }],
-        location: normalizedFacility.location || {
-            coordinates: {
-                latitude: normalizedFacility.coordinates?.[0],
-                longitude: normalizedFacility.coordinates?.[1]
-            }
-        },
-        availability: normalizedFacility.availability || {
-          status: 'available',
-          schedule: {
-            monday: { isOpen: true, openTime: '06:00',  closeTime: '22:00' },
-            tuesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
-            wednesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
-            thursday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
-            friday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
-            saturday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
-            sunday: { isOpen: true, openTime: '06:00', closeTime: '22:00' }
-          }
-        },
-        isActive: true,
-        verified: true
-      };
-    }
-
+    pendingBookingRef.current = bookingPayload;
     setShowPayment(true);
   };
-
-      try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(bookingPayload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Booking failed');
-      }
-
-      toast.success('Booking request submitted successfully!');
-      setTimeout(() => navigate('/bookings'), 1500);
-    } catch (error) {
-      toast.error(error.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const totalCost = calculateCost();
-  const minDate = new Date().toISOString().split('T')[0];
-
 
   const handlePaymentComplete = (bookingId, paymentId) => {
     pendingBookingRef.current = null;
