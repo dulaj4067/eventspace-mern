@@ -25,6 +25,24 @@ const verifyToken = async (req, res, next) => { // 2. Add 'async'
     }
 };
 
+// Optional JWT — sets req.user when a valid token is sent; otherwise continues
+const optionalVerifyToken = async (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+        return next();
+    }
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your_jwt_secret_key_here");
+        const user = await User.findById(decoded.id).select("-password");
+        if (user) {
+            req.user = user;
+        }
+    } catch {
+        // ignore invalid tokens for optional auth
+    }
+    next();
+};
+
 // Check if user is admin
 const isAdmin = (req, res, next) => {
     // 4. Ensure req.user exists before checking role
@@ -34,4 +52,4 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
-module.exports = { verifyToken, isAdmin };
+module.exports = { verifyToken, optionalVerifyToken, isAdmin };

@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge.jsx';
 import { toast } from 'sonner';
 import { PaymentModal } from './PaymentModal.jsx';
-import { FacilityRatings } from '../Rating/FacilityRatings.jsx'; // ← read-only ratings display
-
-const EXTERNAL_CENTERS_STORAGE_KEY = 'externalCommunityCenters';
+import { FacilityImage } from '../common/FacilityImage.jsx';
+import { FacilityRatings } from '../Rating/FacilityRatings.jsx';
+import { EXTERNAL_CENTERS_STORAGE_KEY, loadExternalOverrides } from '../../utils/externalFacilityClient.js';
 
 const timeSlots = [
   '06:00','07:00','08:00','09:00','10:00','11:00',
@@ -20,6 +20,7 @@ const timeSlots = [
 ];
 
 const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const FALLBACK_URL = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
 
 export function FacilityDetail() {
   const { id } = useParams();
@@ -51,7 +52,8 @@ export function FacilityDetail() {
           const centers = JSON.parse(localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY) || '[]');
           const found = centers.find((c) => c.id === id);
           if (!found) throw new Error('Community center not found');
-          if (isMounted) setFacility(found);
+          const override = loadExternalOverrides()[id];
+          if (isMounted) setFacility(override ? { ...found, ...override } : found);
           return;
         }
         const token = localStorage.getItem('token');
@@ -156,14 +158,13 @@ export function FacilityDetail() {
     const hourlyRate = facility.pricing?.hourlyRate ?? facility.hourlyRate ?? 0;
     return {
       ...facility,
-      image,
       hourlyRate,
       amenities: [
         ...(facility.amenities || []),
         ...nearbyPlaces.map((p) => p.type).filter(Boolean).slice(0, 2).map((t) => `Nearby ${t}`),
       ],
     };
-  }, [facility, nearbyPlaces]);
+  }, [facility]);
 
   const todaySchedule = useMemo(() => {
     if (!normalizedFacility?.availability?.schedule) return null;
@@ -202,16 +203,58 @@ export function FacilityDetail() {
     const fee = parseFloat((subtotal * 0.02).toFixed(2));
     const total = parseFloat((subtotal + fee).toFixed(2));
 
-    pendingBookingRef.current = {
+    const isExternal = id?.startsWith('community-') || id?.startsWith('external-');
+    
+    const bookingPayload = {
       facility: id,
       date: formData.date,
       startTime: formData.startTime,
       endTime: formData.endTime,
       purpose: formData.purpose,
-      attendees: { expected: formData.attendees ? parseInt(formData.attendees) : 1 },
-      pricing: { hourlyRate, subtotal, serviceFee: fee, discount: 0, total },
+      attendees: { expected: formData.attendees ? parseInt(formData.attendees, 10) : 1 },
+      pricing: {
+        hourlyRate,
+        subtotal,
+        serviceFee: fee,
+        discount: 0,
+        total,
+      },
     };
 
+    if (isExternal) {
+      // Ensure data is properly formatted for the backend Facility model
+      bookingPayload.externalFacilityData = {
+        name: normalizedFacility.name,
+        type: normalizedFacility.type || 'Community Center',
+        description: normalizedFacility.description || 'No description available.',
+        capacity: normalizedFacility.capacity || 50,
+        hourlyRate: normalizedFacility.hourlyRate || 0,
+        amenities: normalizedFacility.amenities || [],
+        images: normalizedFacility.images || [{ url: normalizedFacility.image, isPrimary: true }],
+        location: normalizedFacility.location || {
+          coordinates: {
+            latitude: normalizedFacility.coordinates?.[0],
+            longitude: normalizedFacility.coordinates?.[1],
+          },
+        },
+        availability: normalizedFacility.availability || {
+          status: 'available',
+          schedule: {
+            monday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            tuesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            wednesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            thursday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            friday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            saturday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+            sunday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          },
+        },
+        isActive: true,
+        verified: true,
+      };
+    }
+
+    pendingBookingRef.current = bookingPayload;
     setShowPayment(true);
   };
 
@@ -282,9 +325,8 @@ export function FacilityDetail() {
           {/* ── Left column: facility details + ratings ── */}
           <div className="space-y-6">
             <div className="bg-white rounded-lg overflow-hidden shadow-sm">
-              <img
-                src={normalizedFacility.image}
-                alt={normalizedFacility.name}
+              <FacilityImage
+                facility={normalizedFacility}
                 className="w-full h-64 lg:h-96 object-cover"
               />
               <div className="p-6">

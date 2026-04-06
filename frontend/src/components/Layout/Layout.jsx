@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Calendar, Home, Settings, Menu, X, LogOut, User, CalendarDays, ChevronDown } from 'lucide-react';
+import { Calendar, Home, Settings, Menu, X, LogOut, User, CalendarDays, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { TermsConsentBar } from '../common/TermsConsentBar.jsx';
 import { Button } from '../ui/button.jsx';
 import logo from '../../assets/logo.png';
 
@@ -73,7 +74,7 @@ export function Layout() {
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <CalendarDays className="w-4 h-4" />
+                  <Globe className="w-4 h-4" />
                   <span>Events</span>
                   <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${eventsDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -89,7 +90,7 @@ export function Layout() {
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <CalendarDays className="w-4 h-4" />
+                      <Globe className="w-4 h-4" />
                       All Events
                     </Link>
                     <Link
@@ -101,7 +102,7 @@ export function Layout() {
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <Calendar className="w-4 h-4" />
+                      <UserCheck className="w-4 h-4" />
                       My Events
                     </Link>
                     <Link
@@ -109,7 +110,7 @@ export function Layout() {
                       onClick={() => setEventsDropdownOpen(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50"
                     >
-                      <span className="text-purple-600 font-bold text-lg">+</span>
+                      <PlusCircle className="w-4 h-4 text-purple-600" />
                       Create Event
                     </Link>
                   </div>
@@ -125,7 +126,7 @@ export function Layout() {
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <Calendar className="w-4 h-4" />
+                <Building2 className="w-4 h-4" />
                 <span>Facilities</span>
               </Link>
 
@@ -139,7 +140,7 @@ export function Layout() {
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <Calendar className="w-4 h-4" />
+                  <Ticket className="w-4 h-4" />
                   <span>My Bookings</span>
                   <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${bookingsDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -155,7 +156,7 @@ export function Layout() {
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <Calendar className="w-4 h-4" />
+                      <ClipboardList className="w-4 h-4" />
                       My Bookings
                     </Link>
                     <Link
@@ -167,7 +168,7 @@ export function Layout() {
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <CalendarDays className="w-4 h-4" />
+                      <CalendarRange className="w-4 h-4" />
                       Booking Calendar
                     </Link>
                   </div>
@@ -184,7 +185,7 @@ export function Layout() {
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <Settings className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4" />
                   <span>Admin</span>
                 </Link>
               )}
@@ -244,15 +245,15 @@ export function Layout() {
               <div className="px-3 pt-1">
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Events</p>
                 <Link to="/events" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
-                  <CalendarDays className="w-4 h-4" />
+                  <Globe className="w-4 h-4" />
                   <span>All Events</span>
                 </Link>
                 <Link to="/my-events" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
-                  <Calendar className="w-4 h-4" />
+                  <UserCheck className="w-4 h-4" />
                   <span>My Events</span>
                 </Link>
                 <Link to="/create-event" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
-                  <span className="text-purple-600 font-bold">+</span>
+                  <PlusCircle className="w-4 h-4 text-purple-600" />
                   <span>Create Event</span>
                 </Link>
               </div>
@@ -266,25 +267,25 @@ export function Layout() {
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <Calendar className="w-4 h-4" />
+                <Building2 className="w-4 h-4" />
                 <span>Facilities</span>
               </Link>
 
               <div className="px-3 pt-1">
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">My Bookings</p>
                 <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
-                  <Calendar className="w-4 h-4" />
+                  <ClipboardList className="w-4 h-4" />
                   <span>My Bookings</span>
                 </Link>
                 <Link to="/booking-calendar" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
-                  <CalendarDays className="w-4 h-4" />
+                  <CalendarRange className="w-4 h-4" />
                   <span>Booking Calendar</span>
                 </Link>
               </div>
 
               {isAdmin && (
                 <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
-                  <Settings className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4" />
                   <span>Admin</span>
                 </Link>
               )}
@@ -313,9 +314,11 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 pb-28">
         <Outlet />
       </main>
+
+      <TermsConsentBar />
 
       <footer className="bg-gradient-to-r from-gray-900 to-slate-900 text-white mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

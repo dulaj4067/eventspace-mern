@@ -511,6 +511,44 @@ const deletePayment = async (req, res) => {
     }
 };
 
+// Get payments received by user (as owner or organizer)
+const getReceivedPayments = async (req, res) => {
+    const userId = req.user._id;
+    try {
+        const Facility = require("../models/Facilities");
+        const Event = require("../models/Event");
+
+        // Find facilities owned by the user
+        const userFacilities = await Facility.find({ owner: userId }).select('_id');
+        const facilityIds = userFacilities.map(f => f._id);
+
+        // Find events organized by the user
+        const userEvents = await Event.find({ organizer: userId }).select('_id');
+        const eventIds = userEvents.map(e => e._id);
+
+        // Find all bookings for those facilities to get their IDs
+        const facilityBookings = await Booking.find({ facility: { $in: facilityIds } }).select('_id');
+        const bookingIds = facilityBookings.map(b => b._id);
+
+        // Find payments linked to user's events OR user's facility bookings
+        const payments = await Payment.find({
+            $or: [
+                { eventId: { $in: eventIds } },
+                { bookingId: { $in: bookingIds } }
+            ]
+        })
+        .populate('bookingId', 'date purpose')
+        .populate('eventId', 'name schedule.date')
+        .populate('userId', 'name email')
+        .sort({ createdAt: -1 });
+
+        res.status(200).json({ payments });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Error fetching received payments", error: err.message });
+    }
+};
+
 module.exports = {
     createPayment,
     uploadBankSlip,
@@ -525,5 +563,6 @@ module.exports = {
     updatePaymentStatus,
     processPayment,
     getPaymentLogs,
-    deletePayment,
+    getReceivedPayments,
+    deletePayment
 };

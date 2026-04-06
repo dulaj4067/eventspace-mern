@@ -10,6 +10,8 @@ import { Admin } from './components/Admin/Admin.jsx';
 import { Login } from './components/Login/Login.jsx';
 import { Register } from './components/Register/Register.jsx';
 import { CreateEvent } from './components/CreateEvent/CreateEvent.jsx';
+import { CreateFacility } from './components/CreateFacility/CreateFacility.jsx';
+import { EditFacility } from './components/EditFacility/EditFacility.jsx';
 import { EditEvent } from './components/CreateEvent/EditEvent.jsx';
 import { EventDetail } from './components/EventDetail/EventDetail.jsx';
 import { MyEvents } from './components/MyEvents/MyEvents.jsx';
@@ -78,6 +80,14 @@ export const router = createBrowserRouter([
       {
         path: 'create-event',
         Component: CreateEvent,
+      },
+      {
+        path: 'create-facility',
+        Component: CreateFacility,
+      },
+      {
+        path: 'edit-facility/:id',
+        Component: EditFacility,
       },
       {
         path: 'edit-event/:id',

@@ -19,7 +19,7 @@ const { getCalendarBookings, pushToGoogleCalendar } = require('../services/Booki
 
 const createBooking = async (req, res) => {
     try {
-        const {
+        let {
             facility,
             event,
             date,
@@ -28,11 +28,39 @@ const createBooking = async (req, res) => {
             purpose,
             attendees,
             pricing,
-            specialRequests
+            specialRequests,
+            externalFacilityData
         } = req.body;
 
         // Use authenticated user from JWT
         const user = req.user.id;
+
+        // If it's an external facility ID (e.g. "community-123"),
+        // check if it's already in our DB or create it.
+        if (typeof facility === 'string' && (facility.startsWith('community-') || facility.startsWith('external-'))) {
+            let existingFacility = await Facility.findOne({ externalId: facility });
+            
+            if (!existingFacility) {
+                if (!externalFacilityData) {
+                     return res.status(400).json({ 
+                        success: false, 
+                        message: 'External facility data is required to book this location for the first time.' 
+                    });
+                }
+                
+                // Create a facility record for this external location
+                const newFacility = new Facility({
+                    ...externalFacilityData,
+                    externalId: facility,
+                    isExternal: true,
+                    verified: true, // Auto-verify real world locations
+                    isActive: true
+                });
+                existingFacility = await newFacility.save();
+            }
+            // Use the database _id for the booking
+            facility = existingFacility._id;
+        }
 
         // Check if facility is already booked for this date/time
         const overlappingBooking = await Booking.findOne({

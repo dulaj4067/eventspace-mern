@@ -9,13 +9,46 @@ import { Badge } from '../ui/badge.jsx';
 import { Card, CardContent, CardFooter } from '../ui/card.jsx';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { FacilityImage } from '../common/FacilityImage.jsx';
+import { facilityIcon, MAP_TILES } from '../../utils/mapUtils';
+import { Locate, Maximize2 } from 'lucide-react';
+import { useMap } from 'react-leaflet';
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+function MapController({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.flyTo(center, zoom || 14, { duration: 1.5 });
+    }
+  }, [center, zoom, map]);
+  return null;
+}
+
+function LocateControl({ onLocate }) {
+  const map = useMap();
+  const handleLocate = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const pos = [position.coords.latitude, position.coords.longitude];
+        map.flyTo(pos, 15, { duration: 2 });
+        onLocate(pos);
+      });
+    }
+  };
+  return (
+    <div className="leaflet-top leaflet-right" style={{ marginTop: '70px', marginRight: '10px' }}>
+      <div className="leaflet-control">
+        <button
+          onClick={handleLocate}
+          className="bg-white p-2 rounded-lg shadow-md hover:bg-gray-50 text-blue-600 transition-colors"
+          title="Locate me"
+        >
+          <Locate size={20} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function FacilitiesView({
   facilities,
@@ -31,10 +64,20 @@ export function FacilitiesView({
   errorMessage,
 }) {
   const [userLocation, setUserLocation] = useState(null);
-  const mapCenter =
-    userLocation ||
-    filteredFacilities.find((facility) => Array.isArray(facility.coordinates))?.coordinates ||
-    [40.7128, -74.006];
+  const isValidCoords = (coords) => {
+    return Array.isArray(coords) && 
+           coords.length === 2 && 
+           typeof coords[0] === 'number' && 
+           typeof coords[1] === 'number' &&
+           !isNaN(coords[0]) && !isNaN(coords[1]);
+  };
+
+  const mapCenter = useMemo(() => {
+    if (userLocation) return userLocation;
+    const firstWithCoords = filteredFacilities.find((f) => isValidCoords(f.coordinates));
+    if (firstWithCoords) return firstWithCoords.coordinates;
+    return [6.9271, 79.8612]; // Default to Colombo
+  }, [userLocation, filteredFacilities]);
   const ITEMS_PER_PAGE = 9;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -166,27 +209,46 @@ export function FacilitiesView({
         {!isLoading && !errorMessage && (
           <>
         {viewMode === 'map' ? (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8 relative z-0">
-            <div className="h-[600px] relative z-0">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border-8 border-white overflow-hidden mb-8 relative z-0">
+            <div className="h-[650px] relative z-0">
               <MapContainer
                 center={mapCenter}
                 zoom={12}
                 style={{ height: '100%', width: '100%' }}
+                className="z-10"
               >
                 <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url={MAP_TILES.LIGHT}
+                  attribution={MAP_TILES.ATTRIBUTION}
                 />
-                {mapFacilities.map((facility) => (
-                  <Marker key={facility.id} position={facility.coordinates}>
-                    <Popup>
-                      <div className="p-2">
-                        <h3 className="font-semibold mb-1">{facility.name}</h3>
-                        <p className="text-sm text-gray-600 mb-2">{facility.type}</p>
-                        <p className="text-sm mb-1">👥 Capacity: {facility.capacity}</p>
-                        <p className="text-sm mb-2">💵 ${facility.hourlyRate}/hour</p>
-                        <Link to={`/facility/${facility.id}`} className="text-purple-600 text-sm hover:underline">
-                          View Details →
+                <MapController center={mapCenter} />
+                <LocateControl onLocate={setUserLocation} />
+                {mapFacilities
+                  .filter(f => isValidCoords(f.coordinates) || isValidCoords(mapCenter))
+                  .map((facility) => (
+                    <Marker 
+                      key={facility.id} 
+                      position={isValidCoords(facility.coordinates) ? facility.coordinates : mapCenter}
+                      icon={facilityIcon}
+                    >
+                    <Popup className="custom-popup">
+                      <div className="p-2 min-w-[200px]">
+                        <div className="h-32 mb-3 overflow-hidden rounded-xl">
+                           <FacilityImage facility={facility} className="w-full h-full object-cover transition-transform hover:scale-110 duration-500" />
+                        </div>
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-2 bg-blue-100 text-blue-700">
+                          {facility.type}
+                        </span>
+                        <h3 className="font-bold text-slate-900 text-lg mb-1">{facility.name}</h3>
+                        <div className="flex items-center gap-3 text-sm text-slate-500 mb-3">
+                          <span className="flex items-center gap-1"><Users size={14} /> {facility.capacity}</span>
+                          <span className="flex items-center gap-1"><DollarSign size={14} /> ${facility.hourlyRate}/hr</span>
+                        </div>
+                        <Link 
+                          to={`/facility/${facility.id}`} 
+                          className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-blue-200"
+                        >
+                          View & Book <Maximize2 size={14} />
                         </Link>
                       </div>
                     </Popup>
@@ -207,7 +269,7 @@ export function FacilitiesView({
               {paginatedFacilities.map((facility) => (
                 <Card key={facility.id} className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
                   <div className="relative h-48">
-                    <img src={facility.image} alt={facility.name} className="w-full h-full object-cover" />
+                    <FacilityImage facility={facility} className="w-full h-full object-cover" />
                     <Badge className="absolute top-3 right-3 bg-white text-gray-900">
                       {facility.type}
                     </Badge>
@@ -270,4 +332,3 @@ export function FacilitiesView({
     </div>
   );
 }
-

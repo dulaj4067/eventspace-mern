@@ -10,36 +10,7 @@ import { applyLeafletDefaultIcon } from './leafletDefaultIcon.jsx';
 import { InteractiveTile } from './InteractiveTile.jsx';
 import { getAllEvents } from '../../services/eventService';
 
-// Custom Marker Icons
-const createCustomIcon = (color) => L.divIcon({
-  className: 'custom-marker',
-  html: `<div style="
-    background-color: ${color};
-    width: 32px;
-    height: 32px;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px solid white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    ">
-      <div style="
-        width: 10px;
-        height: 10px;
-        background-color: white;
-        border-radius: 50%;
-        transform: rotate(45deg);
-      "></div>
-    </div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32]
-});
-
-const blueIcon = createCustomIcon('#3b82f6'); // blue-500
-const purpleIcon = createCustomIcon('#a855f7'); // purple-500
+import { facilityIcon, eventIcon, MAP_TILES } from '../../utils/mapUtils';
 
 export function Home() {
   applyLeafletDefaultIcon();
@@ -80,7 +51,7 @@ export function Home() {
             type: 'facility',
             category: facility.type || 'Facility',
             position: isValid ? [lat, lon] : null,
-            icon: blueIcon,
+            icon: facilityIcon,
             description: facility.description
           };
         }).filter(item => item.position !== null);
@@ -98,7 +69,7 @@ export function Home() {
             type: 'event',
             category: event.type || 'Event',
             position: isValid ? [lat, lon] : null,
-            icon: purpleIcon,
+            icon: eventIcon,
             description: event.description,
             date: event.schedule?.date
           };
@@ -121,7 +92,7 @@ export function Home() {
             type: 'facility',
             category: center.type || 'Community Center',
             position: center.coordinates,
-            icon: blueIcon
+            icon: facilityIcon
           }));
 
         if (isMounted) {
@@ -309,8 +280,8 @@ export function Home() {
               className="z-10"
             >
               <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url={MAP_TILES.LIGHT}
+                attribution={MAP_TILES.ATTRIBUTION}
               />
               {sortedMapLocations.map((location) => (
                 <Marker 

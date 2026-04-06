@@ -1,13 +1,27 @@
-import { algoliasearch } from 'algoliasearch';
-import Facility from "../models/Facilities.js";
-import FacilityOwner from "../models/FacilityOwner.js";
-import User from "../models/User.js";
+const { algoliasearch } = require('algoliasearch');
+const mongoose = require('mongoose');
+const Facility = require("../models/Facilities.js");
+const FacilityOwner = require("../models/FacilityOwner.js");
+const Booking = require("../models/Booking.js");
+const Payment = require("../models/Payments.js");
+const User = require("../models/User.js");
+
+// Import helpers from Nominatimservice
+const {
+  geocodeAddress,
+  reverseGeocodeCoordinates,
+  findNearbyFacilities,
+  getRouteDistance,
+  searchNearbyPlaces,
+  validateCoordinates,
+  getAddressSuggestions
+} = require('../services/Nominatimservice.js');
 
 const client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_KEY);
 const INDEX_NAME = 'facilities_index';
 
 // GET FACILITY BY ID
-export const getFacilityById = async (req, res) => {
+const getFacilityById = async (req, res) => {
   try {
     const facility = await Facility.findById(req.params.id)
       .populate('owner', 'name email');
@@ -34,7 +48,7 @@ export const getFacilityById = async (req, res) => {
 };
 
 // CREATE FACILITY (User becomes owner)
-export const createFacility = async (req, res) => {
+const createFacility = async (req, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -112,7 +126,7 @@ export const createFacility = async (req, res) => {
 };
 
 // GET FACILITY OWNER PROFILE
-export const getFacilityOwnerProfile = async (req, res) => {
+const getFacilityOwnerProfile = async (req, res) => {
   try {
     const facilityOwner = await FacilityOwner.findOne({ user: req.user._id })
       .populate('user', 'name email phone')
@@ -139,7 +153,7 @@ export const getFacilityOwnerProfile = async (req, res) => {
 };
 
 // GET ALL FACILITIES
-export const getAllFacilities = async (req, res) => {
+const getAllFacilities = async (req, res) => {
   try {
     const {
       type,
@@ -183,8 +197,9 @@ export const getAllFacilities = async (req, res) => {
     });
   }
 };
+
 // VERIFY FACILITY (Admin only)
-export const verifyFacility = async (req, res) => {
+const verifyFacility = async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -241,7 +256,7 @@ export const verifyFacility = async (req, res) => {
 };
 
 // UPDATE FACILITY OWNER PROFILE
-export const updateFacilityOwnerProfile = async (req, res) => {
+const updateFacilityOwnerProfile = async (req, res) => {
   try {
     const { companyName, bio, socialLinks, bankDetails, policies } = req.body;
 
@@ -279,7 +294,7 @@ export const updateFacilityOwnerProfile = async (req, res) => {
 };
 
 // GET OWNER'S FACILITIES
-export const getMyFacilities = async (req, res) => {
+const getMyFacilities = async (req, res) => {
   try {
     const { page = 1, limit = 10, verified } = req.query;
 
@@ -319,7 +334,7 @@ export const getMyFacilities = async (req, res) => {
 };
 
 // UPDATE FACILITY (Owner only)
-export const updateFacility = async (req, res) => {
+const updateFacility = async (req, res) => {
   try {
     const facility = await Facility.findById(req.params.id);
 
@@ -361,7 +376,7 @@ export const updateFacility = async (req, res) => {
 };
 
 // DELETE FACILITY (Owner only)
-export const deleteFacility = async (req, res) => {
+const deleteFacility = async (req, res) => {
   try {
     const facility = await Facility.findById(req.params.id);
 
@@ -416,7 +431,7 @@ export const deleteFacility = async (req, res) => {
 };
 
 // GET NEARBY FACILITIES (GEOSPATIAL)
-export const getNearbyFacilities = async (req, res) => {
+const getNearbyFacilities = async (req, res) => {
   try {
     const { latitude, longitude, radiusKm = 5 } = req.query;
 
@@ -445,7 +460,7 @@ export const getNearbyFacilities = async (req, res) => {
 };
 
 // ADDRESS TO COORDINATES (GEOCODING)
-export const geocodeLocation = async (req, res) => {
+const geocodeLocation = async (req, res) => {
   try {
     const { address } = req.body;
     if (!address) return res.status(400).json({ success: false, message: "Address is required" });
@@ -460,7 +475,7 @@ export const geocodeLocation = async (req, res) => {
 };
 
 // COORDINATES TO ADDRESS (REVERSE GEOCODING)
-export const reverseGeocodeLocation = async (req, res) => {
+const reverseGeocodeLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
     const validation = validateCoordinates(latitude, longitude);
@@ -476,7 +491,7 @@ export const reverseGeocodeLocation = async (req, res) => {
 };
 
 // SEARCH NEARBY BY ADDRESS STRING
-export const searchFacilitiesByAddress = async (req, res) => {
+const searchFacilitiesByAddress = async (req, res) => {
   try {
     const { address, radiusKm = 5 } = req.body;
     if (!address) return res.status(400).json({ success: false, message: "Address is required" });
@@ -500,7 +515,7 @@ export const searchFacilitiesByAddress = async (req, res) => {
 };
 
 // GET ROUTE DISTANCE AND DURATION
-export const getRouteInfo = async (req, res) => {
+const getRouteInfo = async (req, res) => {
   try {
     const { startLatitude, startLongitude, endLatitude, endLongitude } = req.query;
     const routeInfo = await getRouteDistance(startLatitude, startLongitude, endLatitude, endLongitude);
@@ -514,7 +529,7 @@ export const getRouteInfo = async (req, res) => {
 };
 
 // SEARCH EXTERNAL PLACES (POI)
-export const searchNearbyPlacesEndpoint = async (req, res) => {
+const searchNearbyPlacesEndpoint = async (req, res) => {
   try {
     const { latitude, longitude, searchTerm, radius = 5000 } = req.query;
     const places = await searchNearbyPlaces(latitude, longitude, searchTerm, parseInt(radius));
@@ -526,7 +541,7 @@ export const searchNearbyPlacesEndpoint = async (req, res) => {
 };
 
 // GET ADDRESS AUTOCOMPLETE SUGGESTIONS
-export const getAddressAutocomplete = async (req, res) => {
+const getAddressAutocomplete = async (req, res) => {
   try {
     const { query } = req.query;
     if (!query || query.length < 3) return res.status(400).json({ success: false, message: "Query too short" });
@@ -539,7 +554,7 @@ export const getAddressAutocomplete = async (req, res) => {
 };
 
 // GET FACILITY TYPES LIST
-export const getFacilityTypes = async (req, res) => {
+const getFacilityTypes = async (req, res) => {
   const types = [
     'Conference Room', 
     'Meeting Room', 
@@ -557,7 +572,7 @@ export const getFacilityTypes = async (req, res) => {
 };
 
 // GET FACILITY ANALYTICS/STATS
-export const getFacilityStats = async (req, res) => {
+const getFacilityStats = async (req, res) => {
   try {
     const total = await Facility.countDocuments({ isActive: true });
     const byType = await Facility.aggregate([
@@ -569,4 +584,129 @@ export const getFacilityStats = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
   }
+};
+
+// GET DETAILED FACILITY REPORT
+const getFacilityReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const facility = await Facility.findById(id).populate('owner', 'name email');
+    if (!facility) {
+      return res.status(404).json({ success: false, message: "Facility not found" });
+    }
+
+    const isOwner = facility.owner?._id?.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: "Unauthorized to access this report" });
+    }
+
+    const bookings = await Booking.find({ facility: id }).populate('user', 'name email').sort({ date: -1 });
+    const bookingIds = bookings.map(b => b._id);
+    const payments = await Payment.find({ bookingId: { $in: bookingIds } }).sort({ createdAt: -1 });
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+
+    const revenueByMonth = await Payment.aggregate([
+      { 
+        $match: { 
+          bookingId: { $in: bookingIds }, 
+          paymentStatus: 'completed',
+          createdAt: { $gte: sixMonthsAgo }
+        } 
+      },
+      {
+        $group: {
+          _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
+          total: { $sum: "$amount" }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+
+    const statusDistribution = await Booking.aggregate([
+      { $match: { facility: new mongoose.Types.ObjectId(id) } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const dayOfWeekNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const weekdayDistributionRaw = await Booking.aggregate([
+      { $match: { facility: new mongoose.Types.ObjectId(id) } },
+      { $group: { _id: { $dayOfWeek: "$date" }, count: { $sum: 1 } } }
+    ]);
+    
+    const weekdayDistribution = weekdayDistributionRaw.map(d => ({
+      name: dayOfWeekNames[d._id - 1],
+      count: d.count
+    })).sort((a, b) => dayOfWeekNames.indexOf(a.name) - dayOfWeekNames.indexOf(b.name));
+
+    const hourlyDistribution = await Booking.aggregate([
+      { $match: { facility: new mongoose.Types.ObjectId(id) } },
+      { $group: { _id: "$startTime", count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        facility,
+        summary: {
+          totalBookings: bookings.length,
+          totalRevenue: payments.filter(p => p.paymentStatus === 'completed').reduce((sum, p) => sum + p.amount, 0),
+          averageRating: facility.rating?.average || 0,
+          verified: facility.verified
+        },
+        bookings: bookings.map(b => ({
+          _id: b._id,
+          userName: b.user?.name,
+          date: b.date,
+          startTime: b.startTime,
+          endTime: b.endTime,
+          status: b.status,
+          total: b.pricing?.total
+        })),
+        payments: payments.map(p => ({
+          _id: p._id,
+          amount: p.amount,
+          status: p.paymentStatus,
+          method: p.paymentMethod,
+          date: p.createdAt
+        })),
+        analytics: {
+          revenueByMonth,
+          statusDistribution,
+          weekdayDistribution,
+          hourlyDistribution
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Report Generation Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to generate report", error: error.message });
+  }
+};
+
+module.exports = {
+  getFacilityById,
+  createFacility,
+  getFacilityOwnerProfile,
+  getAllFacilities,
+  verifyFacility,
+  updateFacilityOwnerProfile,
+  getMyFacilities,
+  updateFacility,
+  deleteFacility,
+  getNearbyFacilities,
+  geocodeLocation,
+  reverseGeocodeLocation,
+  searchFacilitiesByAddress,
+  getRouteInfo,
+  searchNearbyPlacesEndpoint,
+  getAddressAutocomplete,
+  getFacilityTypes,
+  getFacilityStats,
+  getFacilityReport
 };

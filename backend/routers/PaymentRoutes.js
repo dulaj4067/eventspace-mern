@@ -17,7 +17,8 @@ const {
     updatePaymentStatus,
     processPayment,
     getPaymentLogs,
-    deletePayment,
+    getReceivedPayments,
+    deletePayment
 } = require("../controllers/PaymentController");
 const { verifyToken, isAdmin } = require("../middleware/Authmiddleware");
 
@@ -63,11 +64,9 @@ router.get("/event/:eventId", verifyToken, getPaymentsByEventId);
 
 // ── User payments ──────────────────────────────────────────────────────────────
 router.get("/user/:userId", verifyToken, getPaymentsByUserId);
+router.get("/received", verifyToken, getReceivedPayments);
 
-// ── Stripe routes — must be BEFORE /:id to avoid route conflicts ───────────────
-router.post("/create-intent", verifyToken, createPaymentIntent);
-
-// ── Bank slip / manual payment creation ───────────────────────────────────────
+// Venue booking payment route
 router.post("/", verifyToken, createPayment);
 
 // ── Specific payment actions ───────────────────────────────────────────────────
