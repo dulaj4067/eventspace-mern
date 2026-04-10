@@ -128,7 +128,6 @@ const facilityOwnerSchema = new Schema({
   timestamps: true
 });
 
-facilityOwnerSchema.index({ user: 1 });
 facilityOwnerSchema.index({ verified: 1 });
 facilityOwnerSchema.index({ status: 1 });
 facilityOwnerSchema.index({ 'revenue.totalRevenue': -1 });
