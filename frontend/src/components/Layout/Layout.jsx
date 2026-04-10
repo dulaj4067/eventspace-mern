@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Calendar, Home, Settings, Menu, X, LogOut, User, CalendarDays, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck } from 'lucide-react';
+import { Calendar, Home, Settings, Menu, X, LogOut, User, Users, CalendarDays, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { getCommunityMembers } from '../../services/communityService.js';
 import { TermsConsentBar } from '../common/TermsConsentBar.jsx';
 import { Button } from '../ui/button.jsx';
 import logo from '../../assets/logo.png';
@@ -11,9 +12,30 @@ export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bookingsDropdownOpen, setBookingsDropdownOpen] = useState(false);
   const [eventsDropdownOpen, setEventsDropdownOpen] = useState(false);
+  const [notifications, setNotifications] = useState({ dms: 0, community: 0 });
   const bookingsDropdownRef = useRef(null);
   const eventsDropdownRef = useRef(null);
   const { logout, isAuthenticated, isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const fetchNotifications = async () => {
+      try {
+        const response = await getCommunityMembers();
+        setNotifications({
+          dms: response.data.totalUnreadDMs || 0,
+          community: response.data.totalCommunityUnread || 0
+        });
+      } catch (err) {
+        console.error('Notification fetch error:', err);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const isActive = (path) => {
     if (path === '/home') return location.pathname === '/home';
@@ -117,7 +139,6 @@ export function Layout() {
                 )}
               </div>
 
-              {/* Facilities */}
               <Link
                 to="/facilities"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
@@ -128,6 +149,23 @@ export function Layout() {
               >
                 <Building2 className="w-4 h-4" />
                 <span>Facilities</span>
+              </Link>
+
+              {/* Community */}
+              <Link
+                to="/community"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm relative ${
+                  isActive('/community')
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <div className="relative">
+                  <Users className="w-4 h-4" />
+                  {notifications.dms > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
+                  {notifications.community > 0 && notifications.dms === 0 && <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3"><span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>}
+                </div>
+                <span>Community</span>
               </Link>
 
               {/* My Bookings Dropdown */}
@@ -257,7 +295,6 @@ export function Layout() {
                   <span>Create Event</span>
                 </Link>
               </div>
-
               <Link
                 to="/facilities"
                 onClick={() => setMobileMenuOpen(false)}
@@ -269,6 +306,23 @@ export function Layout() {
               >
                 <Building2 className="w-4 h-4" />
                 <span>Facilities</span>
+              </Link>
+
+              <Link
+                to="/community"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors relative ${
+                  isActive('/community')
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <div className="relative">
+                  <Users className="w-4 h-4" />
+                  {notifications.dms > 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span></span>}
+                  {notifications.community > 0 && notifications.dms === 0 && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span></span>}
+                </div>
+                <span>Community</span>
               </Link>
 
               <div className="px-3 pt-1">
@@ -314,7 +368,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="flex-1 pb-28">
+      <main className="flex-1 pb-4">
         <Outlet />
       </main>
 

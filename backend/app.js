@@ -16,11 +16,10 @@ const eventRoutes = require("./routers/EventRoutes.js");
 const facilityRoutes = require("./routers/FacilitiesRoutes");
 const searchRoutes = require("./routers/SearchRoute.js");
 const paymentRoutes = require("./routers/PaymentRoutes");
-//const paymentLogsRoutes = require("./routers/paymentLogsRoutes");
 const locationRoutes = require("./routers/LocationRoutes");
 const communityCenterRoutes = require("./routers/CommunityCenterRoutes");
 const uploadRoutes = require("./routers/UploadRoutes");
-//const path = require("path");
+const communityRoutes = require("./routers/CommunityRoutes");
 
 // Middleware
 app.use(cors());
@@ -29,7 +28,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve uploaded files (bank slips, images, etc.) as static
-// Files are accessible at: http://localhost:5000/uploads/bank-slips/<filename>
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
@@ -45,6 +43,7 @@ app.use('/api/ratings', ratingRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/community", communityRoutes);
 //app.use("/api/payment-logs", paymentLogsRoutes);
 
 // Home route

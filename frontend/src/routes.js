@@ -19,6 +19,7 @@ import { EventAttendees } from './components/EventAttendees/EventAttendees.jsx';
 import { PaymentPage } from './components/PaymentPage/PaymentPage.jsx';
 import { NotFound } from './components/NotFound/NotFound.jsx';
 import { Profile } from './components/Profile/Profile.jsx';
+import { Community } from './components/Community/Community.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         Component: Profile,
+      },
+      {
+        path: 'community',
+        Component: Community,
       },
       {
         path: 'admin',
