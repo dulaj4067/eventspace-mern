@@ -56,7 +56,7 @@ export function FacilityDetail() {
           return;
         }
         const token = sessionStorage.getItem('token');
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
         const res = await fetch(`${API_BASE_URL}/api/facilities/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -92,7 +92,7 @@ export function FacilityDetail() {
 
     (async () => {
       try {
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
         const res = await fetch(`${API_BASE_URL}/api/location/reverse`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

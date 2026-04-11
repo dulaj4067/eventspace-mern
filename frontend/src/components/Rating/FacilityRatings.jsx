@@ -82,7 +82,7 @@ export function FacilityRatings({ facilityId }) {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const res = await fetch(`${API_BASE_URL}/api/ratings/facility/${facilityId}`);
       const payload = await res.json();
       if (res.ok && payload.success) setData(payload.data);

@@ -8,7 +8,7 @@ import {
 import { toast } from 'sonner';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
 
 const injectFonts = () => {
   if (document.getElementById('payment-fonts')) return;

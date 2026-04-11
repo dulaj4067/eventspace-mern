@@ -12,7 +12,7 @@ export function useBookingsState() {
     const fetchBookings = async () => {
       try {
         const token = sessionStorage.getItem('token');
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
         const response = await fetch(`${API_BASE_URL}/api/bookings/my`, { //fix to get only user own bookings
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -44,7 +44,7 @@ export function useBookingsState() {
   const cancelBooking = useCallback(async (id) => {
     try {
       const token = sessionStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const response = await fetch(`${API_BASE_URL}/api/bookings/${id}/cancel`, {
         method: 'PATCH',
         headers: {
@@ -83,7 +83,7 @@ export function useBookingsState() {
   const deleteBooking = useCallback(async (id) => {
     try {
       const token = sessionStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const response = await fetch(`${API_BASE_URL}/api/bookings/${id}/cancelled`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
