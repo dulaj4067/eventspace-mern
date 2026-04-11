@@ -239,8 +239,7 @@ export function useAdminDashboardState() {
       return;
     }
     fetchBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, fetchBookings]);
+  }, [statusFilter, fetchBookings, isFirstRender]);
 
   // ─── Approve booking ─────────────────────────────────────────────────────
   const approveBooking = useCallback(async (id) => {

@@ -93,7 +93,7 @@ export function EventsView({
     const firstEventWithCoords = filteredEvents.find(e => isValidCoords(getEventCoords(e)));
     if (firstEventWithCoords) return getEventCoords(firstEventWithCoords);
     return [6.9271, 79.8612]; // Default to Colombo
-  }, [userLocation, filteredEvents]);
+  }, [userLocation, filteredEvents]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync with Facilities behavior: Sort by distance if user location is known
   const mapEvents = useMemo(() => {
@@ -119,7 +119,7 @@ export function EventsView({
     };
 
     return [...eventsWithCoords].sort((a, b) => distanceInKm(a) - distanceInKm(b));
-  }, [filteredEvents, userLocation]);
+  }, [filteredEvents, userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setCurrentPage(1);

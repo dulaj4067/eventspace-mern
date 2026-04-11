@@ -2,11 +2,10 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, MapPin, Calendar, Users, Clock, ArrowRight, ExternalLink } from 'lucide-react';
+import { MapPin, Calendar, Users, Clock, ArrowRight, ExternalLink } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import logo from '../../assets/logo.png';
 import { applyLeafletDefaultIcon } from './leafletDefaultIcon.jsx';
-import { InteractiveTile } from './InteractiveTile.jsx';
 import { getAllEvents } from '../../services/eventService';
 
 import { facilityIcon, eventIcon, MAP_TILES } from '../../utils/mapUtils';

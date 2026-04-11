@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { 
   User, Mail, Calendar, Shield, Building2, Ticket, 
   CreditCard, CircleDollarSign, TrendingUp, History,
-  Edit2, Save, X, ExternalLink, Clock, CheckCircle2,
+  Edit2, Save, X, ExternalLink, Clock,
   AlertCircle, LayoutDashboard, PlusCircle, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,7 +40,7 @@ export function Profile() {
   useEffect(() => {
     if (user?.name) setName(user.name);
     if (token) fetchDashboardData();
-  }, [user, token]);
+  }, [user, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDashboardData = async () => {
     setLoading(true);

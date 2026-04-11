@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
-  Users, Hash, MessageSquare, Send, Search, Plus,
+  Hash, MessageSquare, Send, Search, Plus,
   Settings, User, Briefcase, Calendar,
-  MoreVertical, Activity, Globe, Sidebar,
-  FileText, Paperclip, X, Image as ImageIcon,
-  Edit, Trash2, AtSign, Smile, BarChart3, Bell, Lock, Info, ExternalLink,
-  ChevronDown, Download, CheckCircle2, Clock
+  MoreVertical, Globe,
+  FileText, Paperclip, X,
+  Edit, Trash2, BarChart3, Bell, Lock,
+  CheckCircle2
 } from 'lucide-react';
 import {
   getCommunityMembers, getMessages, sendMessage,
   getAvailableChats, uploadFile, deleteMessage, updateMessage
 } from '../../services/communityService';
-import { Button } from '../ui/button.jsx';
 import { toast } from 'sonner';
 
 export const Community = () => {
@@ -47,7 +46,7 @@ export const Community = () => {
 
     const interval = setInterval(fetchMembers, 60000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchMembers = async () => {
     try {
