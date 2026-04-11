@@ -175,7 +175,7 @@ export function useFacilitiesState() {
         });
 
         const hiddenExternal = loadHiddenExternalIds();
-        const cachedCentersRaw = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
+        const cachedCentersRaw = sessionStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
         const cachedCenters = (cachedCentersRaw ? JSON.parse(cachedCentersRaw) : [])
           .map(applyExternalOverrides)
           .filter((f) => !hiddenExternal.has(f.id));
@@ -209,7 +209,7 @@ export function useFacilitiesState() {
             const centersToUse = mappedCenters.length > 0 ? mappedCenters : cachedCenters;
             mergedFacilities = dedupeById([...normalizedFacilities, ...centersToUse]);
             if (mappedCenters.length > 0) {
-              localStorage.setItem(EXTERNAL_CENTERS_STORAGE_KEY, JSON.stringify(mappedCenters));
+              sessionStorage.setItem(EXTERNAL_CENTERS_STORAGE_KEY, JSON.stringify(mappedCenters));
             }
             if (isMounted) {
               setFacilities(mergedFacilities);

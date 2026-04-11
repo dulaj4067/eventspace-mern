@@ -6,8 +6,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
+    const storedUser = sessionStorage.getItem('user');
 
     if (!token || !storedUser) return;
 
@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
       const parsedUser = JSON.parse(storedUser);
       setUser(parsedUser);
     } catch {
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
     }
   }, []);
 
@@ -32,8 +32,8 @@ export function AuthProvider({ children }) {
       throw new Error(data.message || 'Login failed');
     }
 
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    sessionStorage.setItem('token', data.token);
+    sessionStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
   };
 
@@ -54,8 +54,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setUser(null);
   };
 
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
-        token: localStorage.getItem('token'),
+        token: sessionStorage.getItem('token'),
         login,
         register,
         logout,

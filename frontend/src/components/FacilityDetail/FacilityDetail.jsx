@@ -56,7 +56,7 @@ export function FacilityDetail() {
           if (isMounted) setFacility(override ? { ...found, ...override } : found);
           return;
         }
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const res = await fetch(`/api/facilities/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
