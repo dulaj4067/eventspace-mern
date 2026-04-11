@@ -80,7 +80,14 @@ export function Home() {
         }).filter(item => item.position !== null);
 
         const externalRaw = sessionStorage.getItem('externalCommunityCenters');
-        const externalCenters = externalRaw ? JSON.parse(externalRaw) : [];
+        let externalCenters = [];
+        try {
+          if (externalRaw && externalRaw !== 'undefined') {
+            externalCenters = JSON.parse(externalRaw);
+          }
+        } catch (e) {
+          console.warn("Failed to parse external centers:", e);
+        }
         const normalizedExternal = externalCenters
           .filter((center) => 
             Array.isArray(center.coordinates) && 
