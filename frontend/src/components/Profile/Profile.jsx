@@ -11,7 +11,7 @@ import {
   User, Mail, Calendar, Shield, Building2, Ticket, 
   CreditCard, CircleDollarSign, TrendingUp, History,
   Edit2, Save, X, ExternalLink, Clock,
-  AlertCircle, LayoutDashboard, PlusCircle, FileDown
+  LayoutDashboard, PlusCircle, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';

@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const injectFonts = () => {
   if (document.getElementById('payment-fonts')) return;
@@ -139,7 +140,6 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
 
   const handlePay = async () => {
     setPaymentError('');
-    const API_BASE_URL = process.env.REACT_APP_API_URL || '';
     if (tab === 'slip') {
       if (!slipFile) { setPaymentError('Please upload your bank transfer slip before submitting.'); return; }
       await handleBankSlip();
