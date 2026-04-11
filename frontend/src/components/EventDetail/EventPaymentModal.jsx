@@ -33,7 +33,7 @@ const labelStyle = {
 const errStyle = { color: '#dc2626', fontSize: 11, marginTop: 4, fontFamily: 'DM Sans, sans-serif' };
 
 const resolveUserId = (token) => {
-  const stored = localStorage.getItem('userId');
+  const stored = sessionStorage.getItem('userId');
   if (stored) return stored;
   try {
     const p = JSON.parse(atob(token.split('.')[1]));
@@ -153,7 +153,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
   const handleStripeCard = async () => {
     setProcessing(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) throw new Error('You are not logged in.');
       const userId = resolveUserId(token);
       if (!userId) throw new Error('Unable to identify user. Please log in again.');
@@ -203,7 +203,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
   const handleBankSlip = async () => {
     setProcessing(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) throw new Error('You are not logged in.');
       const userId = resolveUserId(token);
       if (!userId) throw new Error('Unable to identify user. Please log in again.');

@@ -7,7 +7,7 @@ import { EventPaymentModal } from './EventPaymentModal.jsx';
 
 const getUserFromToken = () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return null;
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload;

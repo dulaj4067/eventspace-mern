@@ -59,7 +59,7 @@ const errStyle = {
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 const resolveUserId = (token) => {
-  const stored = localStorage.getItem('userId');
+  const stored = sessionStorage.getItem('userId');
   if (stored) return stored;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
@@ -256,7 +256,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
     let bookingId = null;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) throw new Error('You are not logged in. Please log in and try again.');
 
       const userId = resolveUserId(token);
@@ -341,7 +341,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
     let bookingId = null;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) throw new Error('You are not logged in. Please log in and try again.');
 
       const userId = resolveUserId(token);

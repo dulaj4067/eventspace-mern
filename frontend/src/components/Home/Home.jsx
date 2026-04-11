@@ -74,7 +74,7 @@ export function Home() {
           };
         }).filter(item => item.position !== null);
 
-        const externalRaw = localStorage.getItem('externalCommunityCenters');
+        const externalRaw = sessionStorage.getItem('externalCommunityCenters');
         const externalCenters = externalRaw ? JSON.parse(externalRaw) : [];
         const normalizedExternal = externalCenters
           .filter((center) => 

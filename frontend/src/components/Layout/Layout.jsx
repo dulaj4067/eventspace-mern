@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Menu, X, LogOut, User, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck, Home } from 'lucide-react';
+import { Menu, X, LogOut, User, Users, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck, Home } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getCommunityMembers } from '../../services/communityService.js';
