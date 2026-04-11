@@ -50,7 +50,7 @@ export function ReviewModal({ booking, onClose, onSubmitted }) {
     setSubmitting(true);
     try {
       const token = sessionStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const res = await fetch(`${API_BASE_URL}/api/ratings`, {
         method: 'POST',
         headers: {

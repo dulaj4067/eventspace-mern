@@ -21,7 +21,7 @@ export function useBookingCalendarState() {
         const fetchCalendarBookings = async () => {
             try {
                 const token = sessionStorage.getItem('token');
-                const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+                const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
                 const response = await fetch(`${API_BASE_URL}/api/bookings/calendar`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });

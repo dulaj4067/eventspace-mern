@@ -264,7 +264,7 @@ export function CreateFacility() {
       if (imageFile) {
         const fd = new FormData();
         fd.append('image', imageFile);
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
         const uploadRes = await fetch(`${API_BASE_URL}/api/upload`, { method: 'POST', body: fd });
         const uploadData = await uploadRes.json();
 
@@ -286,7 +286,7 @@ export function CreateFacility() {
         closedExceptions,
       );
 
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const res = await fetch(`${API_BASE_URL}/api/facilities`, {
         method: 'POST',
         headers: {

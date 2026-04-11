@@ -76,7 +76,7 @@ export function FacilityLocationPicker({ value, onChange, disabled }) {
   const enrichFromCoordinates = async (latitude, longitude, displayLabel) => {
     setResolving(true);
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const res = await fetch(`${API_BASE_URL}/api/location/reverse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,7 +127,7 @@ export function FacilityLocationPicker({ value, onChange, disabled }) {
     if (q.length < 3) return;
     setResolving(true);
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
       const res = await fetch(`${API_BASE_URL}/api/location/geocode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

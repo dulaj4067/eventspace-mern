@@ -143,7 +143,7 @@ function dedupeById(items) {
 }
 
 export function useFacilitiesState() {
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [viewMode, setViewMode] = useState('grid');

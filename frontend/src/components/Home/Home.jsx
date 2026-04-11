@@ -12,7 +12,7 @@ import { facilityIcon, eventIcon, MAP_TILES } from '../../utils/mapUtils';
 
 export function Home() {
   applyLeafletDefaultIcon();
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventspace-mern-production.up.railway.app';
   const [mapLocations, setMapLocations] = useState([]);
   const [mapLoading, setMapLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
