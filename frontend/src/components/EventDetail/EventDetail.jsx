@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { getEventById, registerForEvent, deleteEvent, publishEvent, cancelEvent } from '../../services/eventService';
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Pencil, Trash2, Tag, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { EventPaymentModal } from './EventPaymentModal.jsx';
 
 const getUserFromToken = () => {
   try {
@@ -21,7 +22,15 @@ export function EventDetail() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState(null);
   const tokenUser = getUserFromToken();
+
+  // Reset payment state whenever we navigate to a different event
+  useEffect(() => {
+    setShowPayment(false);
+    setPaymentInfo(null);
+  }, [id]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -49,20 +58,28 @@ export function EventDetail() {
       setRegistering(true);
       const response = await registerForEvent(id, userId);
       if (response.data.paymentRequired) {
-        toast.info('This event requires payment. Redirecting...');
-        setTimeout(() => {
-          navigate(`/payment?eventId=${id}&amount=${response.data.amount}&paymentId=${response.data.paymentId}`);
-        }, 1500);
+        setPaymentInfo({
+          amount: response.data.amount,
+          currency: response.data.currency || 'usd',
+        });
+        setShowPayment(true);
         return;
       }
       toast.success('Successfully registered for event!');
+      const updated = await getEventById(id);
+      setEvent(updated.data.data);
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to register';
       toast.error(message);
-      console.error(err);
     } finally {
       setRegistering(false);
     }
+  };
+
+  // ── Clears both flags so stale paymentInfo can never re-open the modal
+  const closePaymentModal = () => {
+    setShowPayment(false);
+    setPaymentInfo(null);
   };
 
   const handleDelete = async () => {
@@ -109,6 +126,19 @@ export function EventDetail() {
     }
   };
 
+  // ─── Pricing helpers ───────────────────────────────────────────────────────
+  const isFree =
+    event?.pricing?.isFree ||
+    !event?.pricing?.price ||
+    Number(event?.pricing?.price) === 0;
+
+  const formatPrice = (price, currency = 'usd') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(price);
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center min-h-screen text-purple-600 text-xl">
       Loading event...
@@ -124,6 +154,17 @@ export function EventDetail() {
   const userId = tokenUser?.id || tokenUser?._id || tokenUser?.userId;
   const isOrganizer = userId && event.organizer?._id === userId;
   const isAdmin = tokenUser?.role === 'admin';
+
+  // ─── Registration status ───────────────────────────────────────────────────
+  const myRegistration = userId
+    ? event.attendance?.registrations?.find((r) => {
+        const regUserId = r.user?._id?.toString() || r.user?.toString();
+        return regUserId === userId && r.status !== 'cancelled';
+      })
+    : null;
+
+  const isRegistered = Boolean(myRegistration);
+  const registrationStatus = myRegistration?.status;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,13 +230,55 @@ export function EventDetail() {
           </div>
 
           <h1 className="text-4xl md:text-5xl mb-4">{event.name}</h1>
-          <span className="bg-white text-purple-600 px-4 py-1 rounded-full text-sm font-semibold">
-            {event.type}
-          </span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="bg-white text-purple-600 px-4 py-1 rounded-full text-sm font-semibold">
+              {event.type}
+            </span>
+            {isFree ? (
+              <span className="bg-green-400 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                Free Entry
+              </span>
+            ) : (
+              <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-semibold">
+                {formatPrice(event.pricing.price, event.pricing.currency)}
+              </span>
+            )}
+            {isRegistered && (
+              <span className="flex items-center gap-1.5 bg-white/20 border border-white/40 text-white px-4 py-1 rounded-full text-sm font-semibold backdrop-blur-sm">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                You're registered
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        {/* ── Already registered banner ────────────────────────────────────── */}
+        {isRegistered && !isOrganizer && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6 flex items-start gap-4">
+            <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-green-800 mb-1">
+                {registrationStatus === 'attended'
+                  ? 'You attended this event!'
+                  : "You're registered for this event!"}
+              </h3>
+              <p className="text-green-700 text-sm">
+                {registrationStatus === 'attended'
+                  ? 'Thanks for coming along.'
+                  : 'Your spot is confirmed. We look forward to seeing you there.'}
+              </p>
+              {!isFree && myRegistration?.paymentStatus && (
+                <p className="text-green-600 text-xs mt-2">
+                  Payment status:{' '}
+                  <span className="font-semibold capitalize">{myRegistration.paymentStatus}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Status info for organizer */}
         {isOrganizer && event.status === 'draft' && (
@@ -277,24 +360,84 @@ export function EventDetail() {
           </div>
         </div>
 
+        {/* ── Pricing Card ───────────────────────────────────────────────────── */}
+        <div className={`rounded-xl shadow-lg p-8 mb-6 ${isFree ? 'bg-green-50 border border-green-200' : 'bg-white'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <Tag className={`w-6 h-6 ${isFree ? 'text-green-600' : 'text-purple-600'}`} />
+            <h2 className="text-2xl font-semibold">Registration</h2>
+          </div>
+
+          {isFree ? (
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-3xl font-bold text-green-600">Free</p>
+                <p className="text-green-700 text-sm mt-1">No payment required — just register and attend!</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Registration Fee</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {formatPrice(event.pricing.price, event.pricing.currency)}
+                </p>
+                <p className="text-gray-500 text-sm mt-1">
+                  Currency: {(event.pricing.currency || 'USD').toUpperCase()}
+                </p>
+              </div>
+              <div className="bg-purple-50 border border-purple-100 rounded-lg px-5 py-3 text-center">
+                <p className="text-xs text-purple-500 uppercase tracking-wide font-semibold">Paid via</p>
+                <p className="text-purple-700 font-medium mt-1">Card / Bank Transfer</p>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* ── End Pricing Card ──────────────────────────────────────────────── */}
+
         <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
           <h2 className="text-2xl font-semibold mb-4">Organizer</h2>
           <p className="text-gray-600">{event.organizer?.name || 'Unknown'}</p>
           <p className="text-gray-400 text-sm">{event.organizer?.email}</p>
         </div>
 
+        {/* ── Register / Already registered CTA ─────────────────────────────── */}
         {!isOrganizer && (
-          <button
-            onClick={handleRegister}
-            disabled={registering || event.status !== 'published'}
-            className="w-full py-4 rounded-xl text-white text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {registering ? 'Registering...' :
-             event.status !== 'published' ? `Event is ${event.status}` :
-             'Register for this Event'}
-          </button>
+          isRegistered ? (
+            <div className="w-full py-4 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 text-lg font-semibold flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-5 h-5" />
+              You're already registered
+            </div>
+          ) : (
+            <button
+              onClick={handleRegister}
+              disabled={registering || event.status !== 'published'}
+              className="w-full py-4 rounded-xl text-white text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {registering ? 'Registering...' :
+               event.status !== 'published' ? `Event is ${event.status}` :
+               isFree ? 'Register for Free' : `Register — ${formatPrice(event.pricing.price, event.pricing.currency)}`}
+            </button>
+          )
         )}
       </div>
+
+      {/* FIX: use closePaymentModal for both onClose and onSuccess so
+          paymentInfo is always nulled out and can never leak to the next event */}
+      {paymentInfo && (
+        <EventPaymentModal
+          isOpen={showPayment}
+          onClose={closePaymentModal}
+          eventId={id}
+          eventName={event?.name}
+          amount={paymentInfo.amount}
+          currency={paymentInfo.currency}
+          onSuccess={(paymentId) => {
+            closePaymentModal();
+            toast.success('Registration complete!');
+            navigate('/bookings');
+          }}
+        />
+      )}
     </div>
   );
 }

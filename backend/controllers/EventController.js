@@ -590,26 +590,25 @@ exports.registerForEvent = async (req, res) => {
     if (alreadyRegistered)
       return res.status(400).json({ success: false, message: 'User already registered' });
 
-    // ── Payment Enforcement ─────────────────────────────────────────
+    // ── Payment Enforcement ─────────────────────────────────────────────────────
     if (!event.pricing.isFree) {
+      const { paymentId } = req.body;
+      if (!paymentId) {
+        // First call — tell frontend payment is required
+        return res.status(200).json({
+          success: true,
+          paymentRequired: true,
+          amount: event.pricing.price,
+          currency: event.pricing.currency,
+        });
+      }
+      // Second call (after payment) — verify the payment exists and belongs to this event
       const Payment = require('../models/Payments');
-
-      const payment = await Payment.create({
-        eventId: id,
-        userId: userId,
-        amount: event.pricing.price,
-        paymentMethod: 'mock',
-        paymentStatus: 'pending'
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: 'Registration initiated. Complete payment to confirm.',
-        paymentRequired: true,
-        paymentId: payment._id,
-        amount: event.pricing.price,
-        currency: event.pricing.currency
-      });
+      const payment = await Payment.findById(paymentId);
+      if (!payment || payment.eventId?.toString() !== id || payment.userId?.toString() !== userId) {
+        return res.status(400).json({ success: false, message: 'Invalid payment reference.' });
+      }
+      // Allow through — registration proceeds below
     }
     // ───────────────────────────────────────────────────────────────
 
