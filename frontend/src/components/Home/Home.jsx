@@ -26,8 +26,13 @@ export function Home() {
         
         // Fetch Facilities
         const facResponse = await fetch('/api/facilities?limit=100');
-        const facPayload = await facResponse.json();
-        const dbFacilities = facResponse.ok && facPayload.success ? facPayload.data || [] : [];
+        let dbFacilities = [];
+        if (facResponse.ok && facResponse.headers.get('content-type')?.includes('application/json')) {
+          const facPayload = await facResponse.json();
+          dbFacilities = facPayload.success ? facPayload.data || [] : [];
+        } else {
+          console.warn("Facilities API returned non-JSON or error:", facResponse.status);
+        }
 
         // Fetch Events
         let dbEvents = [];
