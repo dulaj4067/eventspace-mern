@@ -49,7 +49,7 @@ export function FacilityDetail() {
         setIsLoadingFacility(true);
         setLoadError('');
         if (id?.startsWith('community-')) {
-          const centers = JSON.parse(localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY) || '[]');
+          const centers = JSON.parse(sessionStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY) || '[]');
           const found = centers.find((c) => c.id === id);
           if (!found) throw new Error('Community center not found');
           const override = loadExternalOverrides()[id];

@@ -100,7 +100,7 @@ export function EditFacility() {
       setError('');
       try {
         if (isExternal) {
-          const raw = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
+          const raw = sessionStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
           const centers = raw ? JSON.parse(raw) : [];
           const base = centers.find((c) => c.id === id || c._id === id);
           if (!base) {
