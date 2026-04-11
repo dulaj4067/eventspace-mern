@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ModernPagination } from '../common/ModernPagination.jsx';
-import { DollarSign, Search, Users, Plus } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { Input } from '../ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Badge } from '../ui/badge.jsx';
@@ -10,7 +10,7 @@ import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FacilityImage } from '../common/FacilityImage.jsx';
 import { facilityIcon, MAP_TILES } from '../../utils/mapUtils';
-import { Locate, Maximize2 } from 'lucide-react';
+import { Locate } from 'lucide-react';
 import { useMap } from 'react-leaflet';
 
 function MapController({ center, zoom }) {
