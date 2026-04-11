@@ -67,20 +67,10 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/community", communityRoutes);
 //app.use("/api/payment-logs", paymentLogsRoutes);
 
-// Serve static assets in production
-if (process.env.NODE_ENV === "production") {
-    // Set static folder
-    app.use(express.static(path.join(__dirname, "../frontend/build")));
-
-    app.get("/{*path}", (req, res) => {
-        res.sendFile(path.resolve(__dirname, "../frontend", "build", "index.html"));
-    });
-} else {
-    // Home route for development
-    app.get("/", (req, res) => {
-        res.json({ message: "Welcome to Event Management System API" });
-    });
-}
+// Home route
+app.get("/", (req, res) => {
+    res.json({ message: "Welcome to Event Management System API" });
+});
 
 // MongoDB connection
 if (!process.env.MONGODB_URI) {
