@@ -17,7 +17,12 @@ const {
   getAddressSuggestions
 } = require('../services/Nominatimservice.js');
 
-const client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_KEY);
+let client = null;
+if (process.env.ALGOLIA_APP_ID && process.env.ALGOLIA_ADMIN_KEY) {
+  client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_KEY);
+} else {
+  console.warn('[FacilitiesController] Algolia credentials missing. Search indexing will be disabled.');
+}
 const INDEX_NAME = 'facilities_index';
 
 // GET FACILITY BY ID
@@ -92,17 +97,19 @@ const createFacility = async (req, res) => {
       );
     }
 
-    await client.saveObject({
-      indexName: INDEX_NAME,
-      body: {
-        objectID: savedFacility._id.toString(),
-        name: savedFacility.name,
-        type: savedFacility.type,
-        owner: savedFacility.owner.toString(),
-        verified: false,
-        isActive: true
-      }
-    });
+    if (client) {
+      await client.saveObject({
+        indexName: INDEX_NAME,
+        body: {
+          objectID: savedFacility._id.toString(),
+          name: savedFacility.name,
+          type: savedFacility.type,
+          owner: savedFacility.owner.toString(),
+          verified: false,
+          isActive: true
+        }
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -233,13 +240,15 @@ const verifyFacility = async (req, res) => {
       await facilityOwner.save();
     }
 
-    await client.saveObject({
-      indexName: INDEX_NAME,
-      body: {
-        objectID: facility._id.toString(),
-        verified: true
-      }
-    });
+    if (client) {
+      await client.saveObject({
+        indexName: INDEX_NAME,
+        body: {
+          objectID: facility._id.toString(),
+          verified: true
+        }
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -412,10 +421,12 @@ const deleteFacility = async (req, res) => {
       await facilityOwner.save();
     }
 
-    await client.deleteObject({
-      indexName: INDEX_NAME,
-      objectID: req.params.id.toString()
-    });
+    if (client) {
+      await client.deleteObject({
+        indexName: INDEX_NAME,
+        objectID: req.params.id.toString()
+      });
+    }
 
     return res.status(200).json({
       success: true,

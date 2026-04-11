@@ -71,6 +71,7 @@ export function FacilityDetail() {
     };
     fetchFacility();
     return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // ── Resolve address ─────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ export function FacilityDetail() {
       } catch {}
     })();
     return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facility]);
 
   // ── Nearby places ───────────────────────────────────────────────────────────
@@ -120,6 +122,7 @@ export function FacilityDetail() {
       } catch {}
     })();
     return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facility]);
 
   // ── Route info ──────────────────────────────────────────────────────────────
@@ -145,6 +148,7 @@ export function FacilityDetail() {
       { maximumAge: 120000, timeout: 5000 }
     );
     return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facility]);
 
   // ── Normalized facility ─────────────────────────────────────────────────────

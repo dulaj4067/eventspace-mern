@@ -5,8 +5,11 @@ const Booking = require("../models/Booking");
 const path = require("path");
 const fs = require("fs");
 
-// Stripe initialised once at the top — never inside individual functions
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
+if (!process.env.STRIPE_SECRET_KEY) {
+    console.warn('[PaymentController] STRIPE_SECRET_KEY is missing. Stripe payments will fail.');
+}
+const stripe = require('stripe')(stripeKey);
 
 // ─── 1. CREATE PAYMENT (bank slip / manual — no Stripe) ───────────────────────
 const createPayment = async (req, res) => {

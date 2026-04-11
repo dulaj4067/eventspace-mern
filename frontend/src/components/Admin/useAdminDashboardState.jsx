@@ -229,6 +229,7 @@ export function useAdminDashboardState() {
       return;
     }
     fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, fetchBookings]);
 
   // ─── Approve booking ─────────────────────────────────────────────────────

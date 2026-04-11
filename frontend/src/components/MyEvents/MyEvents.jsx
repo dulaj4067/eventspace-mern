@@ -40,6 +40,7 @@ export function MyEvents() {
     };
 
     fetchMyEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusColor = (status) => {

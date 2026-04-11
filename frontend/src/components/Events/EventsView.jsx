@@ -4,7 +4,7 @@ import { Badge } from '../ui/badge';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Calendar, Clock, MapPin, Search, Users, Plus, Locate, Maximize2, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, Search, Users, Plus, Locate, ExternalLink } from 'lucide-react';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getEventImage } from '../../services/eventService';

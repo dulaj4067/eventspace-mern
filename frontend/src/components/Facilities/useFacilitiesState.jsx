@@ -8,11 +8,6 @@ import {
 const FALLBACK_COORDINATES = [40.7128, -74.006];
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
-function toAddressString(address = {}) {
-  return [address.street, address.city, address.state, address.zipCode, address.country]
-    .filter(Boolean)
-    .join(', ');
-}
 
 function mapFacilityFromApi(facility) {
   const primaryImage =

@@ -2,7 +2,6 @@ import { Link } from 'react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ModernPagination } from '../common/ModernPagination.jsx';
 import { DollarSign, Search, Users, Plus } from 'lucide-react';
-import L from 'leaflet';
 import { Input } from '../ui/input.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Badge } from '../ui/badge.jsx';

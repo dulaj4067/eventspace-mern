@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Calendar, Home, Settings, Menu, X, LogOut, User, CalendarDays, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck } from 'lucide-react';
+import { Menu, X, LogOut, User, ChevronDown, Globe, UserCheck, PlusCircle, Building2, Ticket, ClipboardList, CalendarRange, ShieldCheck, Home } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { TermsConsentBar } from '../common/TermsConsentBar.jsx';
@@ -34,6 +34,7 @@ export function Layout() {
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
