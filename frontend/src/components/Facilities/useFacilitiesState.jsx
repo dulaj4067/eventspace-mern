@@ -176,7 +176,16 @@ export function useFacilitiesState() {
 
         const hiddenExternal = loadHiddenExternalIds();
         const cachedCentersRaw = sessionStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
-        const cachedCenters = (cachedCentersRaw ? JSON.parse(cachedCentersRaw) : [])
+        let parsedCachedCenters = [];
+        try {
+          if (cachedCentersRaw && cachedCentersRaw !== 'undefined') {
+            parsedCachedCenters = JSON.parse(cachedCentersRaw);
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached centers:', e);
+        }
+        
+        const cachedCenters = parsedCachedCenters
           .map(applyExternalOverrides)
           .filter((f) => !hiddenExternal.has(f.id));
         let mergedFacilities = dedupeById([...normalizedFacilities, ...cachedCenters]);
