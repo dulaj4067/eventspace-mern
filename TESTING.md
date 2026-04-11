@@ -1,4 +1,4 @@
-# 🧪 EventSpace MERN - Testing & Performance Guide
+#  EventSpace MERN - Testing & Performance Guide
 
 This project now includes a comprehensive testing suite covering **Facilities**, **Events**, **Bookings**, and **Payments**.
 
