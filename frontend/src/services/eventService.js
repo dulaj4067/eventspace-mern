@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API = '/api/events';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API = `${API_BASE_URL}/api/events`;
 
 const authAxios = () => {
   const token = sessionStorage.getItem('token');

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API = '/api/community';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API = `${API_BASE_URL}/api/community`;
 
 const authAxios = () => {
   const token = sessionStorage.getItem('token');
@@ -32,7 +33,7 @@ export const deleteMessage = (id) =>
 export const uploadFile = (file) => {
   const formData = new FormData();
   formData.append('image', file); // Existing backend endpoint uses 'image' fieldname
-  return authAxios().post('/api/upload/image', formData, {
+  return authAxios().post(`${API_BASE_URL}/api/upload/image`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
