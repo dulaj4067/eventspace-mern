@@ -11,7 +11,7 @@ export function useRevenueTrackingState() {
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API_BASE}/payments`, {
         headers: { Authorization: `Bearer ${token}` },
       });

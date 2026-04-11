@@ -4,7 +4,7 @@ export const ADMIN_HIDDEN_EXTERNAL_KEY = 'adminHiddenExternalIds';
 
 export function loadExternalOverrides() {
   try {
-    const raw = localStorage.getItem(EXTERNAL_OVERRIDES_KEY);
+    const raw = sessionStorage.getItem(EXTERNAL_OVERRIDES_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -14,12 +14,12 @@ export function loadExternalOverrides() {
 export function saveExternalOverride(facilityId, patch) {
   const all = loadExternalOverrides();
   all[facilityId] = { ...all[facilityId], ...patch };
-  localStorage.setItem(EXTERNAL_OVERRIDES_KEY, JSON.stringify(all));
+  sessionStorage.setItem(EXTERNAL_OVERRIDES_KEY, JSON.stringify(all));
 }
 
 export function loadHiddenExternalIds() {
   try {
-    const raw = localStorage.getItem(ADMIN_HIDDEN_EXTERNAL_KEY);
+    const raw = sessionStorage.getItem(ADMIN_HIDDEN_EXTERNAL_KEY);
     const list = raw ? JSON.parse(raw) : [];
     return new Set(Array.isArray(list) ? list : []);
   } catch {
@@ -30,7 +30,7 @@ export function loadHiddenExternalIds() {
 export function addHiddenExternalId(facilityId) {
   const set = loadHiddenExternalIds();
   set.add(facilityId);
-  localStorage.setItem(ADMIN_HIDDEN_EXTERNAL_KEY, JSON.stringify([...set]));
+  sessionStorage.setItem(ADMIN_HIDDEN_EXTERNAL_KEY, JSON.stringify([...set]));
 }
 
 export function applyExternalOverrides(facility) {
