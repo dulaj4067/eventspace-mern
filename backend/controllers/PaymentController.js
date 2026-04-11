@@ -318,7 +318,48 @@ const createEventRegistrationPayment = async (req, res) => {
     }
 };
 
-// ─── 7. GET ALL PAYMENTS ──────────────────────────────────────────────────────
+// ─── 7. CREATE STRIPE PAYMENT INTENT FOR EVENT ───────────────────────────────
+const createEventPaymentIntent = async (req, res) => {
+    const { eventId, userId, amount, paymentMethod } = req.body;
+    if (!eventId || !userId || !amount || !paymentMethod)
+        return res.status(400).json({ message: "Please provide all required fields" });
+    if (amount <= 0)
+        return res.status(400).json({ message: "Amount must be greater than 0" });
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: "Event not found" });
+        if (event.status !== 'published') return res.status(400).json({ message: "Event is not open for registration" });
+        if (event.pricing.isFree) return res.status(400).json({ message: "This event is free" });
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100),
+            currency: event.pricing.currency || 'usd',
+            metadata: { eventId: eventId.toString(), userId: userId.toString() },
+            description: `Event registration: ${event.name}`,
+        });
+        const payment = new Payment({
+            eventId,
+            userId,
+            amount,
+            paymentMethod,
+            paymentType: 'event-registration',
+            paymentStatus: 'pending',
+            stripePaymentIntentId: paymentIntent.id,
+        });
+        await payment.save();
+        await new PaymentLogs({
+            paymentId: payment._id,
+            action: 'created',
+            message: `Stripe PaymentIntent created for event "${event.name}". Intent: ${paymentIntent.id}`,
+            performedBy: userId,
+        }).save();
+        res.status(201).json({ clientSecret: paymentIntent.client_secret, paymentId: payment._id });
+    } catch (err) {
+        console.error('createEventPaymentIntent error:', err);
+        return res.status(500).json({ message: "Error creating event payment intent", error: err.message });
+    }
+};
+
+// ─── 8. GET ALL PAYMENTS ──────────────────────────────────────────────────────
 const getAllPayments = async (req, res) => {
     try {
         const payments = await Payment.find()
@@ -334,7 +375,7 @@ const getAllPayments = async (req, res) => {
     }
 };
 
-// ─── 8. GET PAYMENT BY ID ─────────────────────────────────────────────────────
+// ─── 9. GET PAYMENT BY ID ─────────────────────────────────────────────────────
 const getPaymentById = async (req, res) => {
     const paymentId = req.params.id;
     try {
@@ -351,7 +392,7 @@ const getPaymentById = async (req, res) => {
     }
 };
 
-// ─── 9. GET PAYMENTS BY USER ID ───────────────────────────────────────────────
+// ─── 10. GET PAYMENTS BY USER ID ──────────────────────────────────────────────
 const getPaymentsByUserId = async (req, res) => {
     const userId = req.params.userId;
     try {
@@ -367,7 +408,7 @@ const getPaymentsByUserId = async (req, res) => {
     }
 };
 
-// ─── 10. GET PAYMENTS BY EVENT ID ─────────────────────────────────────────────
+// ─── 11. GET PAYMENTS BY EVENT ID ─────────────────────────────────────────────
 const getPaymentsByEventId = async (req, res) => {
     const eventId = req.params.eventId;
     try {
@@ -382,7 +423,7 @@ const getPaymentsByEventId = async (req, res) => {
     }
 };
 
-// ─── 11. UPDATE PAYMENT STATUS (admin manual override) ────────────────────────
+// ─── 12. UPDATE PAYMENT STATUS (admin manual override) ────────────────────────
 // This is the primary way bank slip payments get approved.
 // Admin reviews bankSlipUrl image, then calls this with paymentStatus: 'completed'.
 const updatePaymentStatus = async (req, res) => {
@@ -448,7 +489,7 @@ const updatePaymentStatus = async (req, res) => {
     }
 };
 
-// ─── 12. PROCESS PAYMENT (mock — kept for non-Stripe flows / testing only) ────
+// ─── 13. PROCESS PAYMENT (mock — kept for non-Stripe flows / testing only) ────
 const processPayment = async (req, res) => {
     const paymentId = req.params.id;
     try {
@@ -485,7 +526,7 @@ const processPayment = async (req, res) => {
     }
 };
 
-// ─── 13. GET PAYMENT LOGS ─────────────────────────────────────────────────────
+// ─── 14. GET PAYMENT LOGS ─────────────────────────────────────────────────────
 const getPaymentLogs = async (req, res) => {
     const paymentId = req.params.id;
     try {
@@ -500,7 +541,7 @@ const getPaymentLogs = async (req, res) => {
     }
 };
 
-// ─── 14. DELETE PAYMENT (admin only) ──────────────────────────────────────────
+// ─── 15. DELETE PAYMENT (admin only) ──────────────────────────────────────────
 const deletePayment = async (req, res) => {
     const paymentId = req.params.id;
     try {
@@ -559,6 +600,7 @@ module.exports = {
     confirmPayment,
     failPayment,
     createEventRegistrationPayment,
+    createEventPaymentIntent,
     getAllPayments,
     getPaymentById,
     getPaymentsByUserId,

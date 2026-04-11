@@ -123,7 +123,7 @@ export function EditFacility() {
           setImagePreview(img);
           setExistingImages(merged.images || []);
         } else {
-          const token = localStorage.getItem('token');
+          const token = sessionStorage.getItem('token');
           const res = await fetch(`/api/facilities/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -230,7 +230,7 @@ export function EditFacility() {
         }
       }
 
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`/api/facilities/${id}`, {
         method: 'PUT',
         headers: {

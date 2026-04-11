@@ -125,7 +125,7 @@ export function useAdminDashboardState() {
   // Extracted into its own function so it can be re-called when statusFilter changes
   const fetchBookings = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const headers = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -150,7 +150,7 @@ export function useAdminDashboardState() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const headers = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -182,12 +182,15 @@ export function useAdminDashboardState() {
     fetchData();
   }, []); // runs once on mount
 
-  const loadExternalCenters = useCallback(async () => {
-    if (externalFetchDoneRef.current) return;
-    externalFetchDoneRef.current = true;
+  const loadExternalCenters = useCallback(async (forceFacilities = null) => {
+    const list = forceFacilities || facilities;
+    
+    // Only fetch once if we have facilities, or if explicitly forced
+    if (externalFetchDoneRef.current && !forceFacilities) return;
+    if (list.length > 0) externalFetchDoneRef.current = true;
+    
     setLoadingExternal(true);
     try {
-      const list = facilities;
       let box = computeBoundingBoxFromMongoFacilities(list);
       if (!box) box = DEFAULT_MAP_BBOX;
       let centers = await fetchCommunityCentersForBox(box);
@@ -202,7 +205,7 @@ export function useAdminDashboardState() {
         })
         .map(mapCommunityCenter);
       if (mapped.length > 0) {
-        localStorage.setItem(EXTERNAL_CENTERS_STORAGE_KEY, JSON.stringify(mapped));
+        sessionStorage.setItem(EXTERNAL_CENTERS_STORAGE_KEY, JSON.stringify(mapped));
       }
       const hidden = loadHiddenExternalIds();
       const visible = mapped
@@ -210,7 +213,7 @@ export function useAdminDashboardState() {
         .map(applyExternalOverrides);
       setExternalCenters(visible);
     } catch {
-      const raw = localStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
+      const raw = sessionStorage.getItem(EXTERNAL_CENTERS_STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
       const hidden = loadHiddenExternalIds();
       setExternalCenters(
@@ -220,6 +223,13 @@ export function useAdminDashboardState() {
       setLoadingExternal(false);
     }
   }, [facilities]);
+
+  // ✅ Auto-load external centers as soon as facilities are available
+  useEffect(() => {
+    if (facilities.length > 0 && !externalFetchDoneRef.current) {
+        loadExternalCenters(facilities);
+    }
+  }, [facilities, loadExternalCenters]);
 
   // ✅ Re-fetch bookings whenever statusFilter changes (skip initial mount)
   const isFirstRender = useMemo(() => ({ current: true }), []);
@@ -235,7 +245,7 @@ export function useAdminDashboardState() {
   // ─── Approve booking ─────────────────────────────────────────────────────
   const approveBooking = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API_BASE}/bookings/${id}/status`, {
         method: 'PATCH',
         headers: {
@@ -267,7 +277,7 @@ export function useAdminDashboardState() {
   // ─── Reject booking ──────────────────────────────────────────────────────
   const rejectBooking = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API_BASE}/bookings/${id}/status`, {
         method: 'PATCH',
         headers: {
@@ -299,7 +309,7 @@ export function useAdminDashboardState() {
   // Removes the booking from local state immediately after success.
   const deleteBooking = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API_BASE}/bookings/${id}`, {
         method: 'DELETE',
         headers: {
@@ -323,7 +333,7 @@ export function useAdminDashboardState() {
 
   const verifyFacility = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API_BASE}/facilities/${id}/verify`, {
         method: 'PUT',
         headers: {
@@ -358,7 +368,7 @@ export function useAdminDashboardState() {
 
   const deleteFacility = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API_BASE}/facilities/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

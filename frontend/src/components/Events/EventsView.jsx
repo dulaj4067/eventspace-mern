@@ -66,7 +66,8 @@ export function EventsView({
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (position) => setUserLocation([position.coords.latitude, position.coords.longitude]),
-      () => setUserLocation(null)
+      () => setUserLocation(null),
+      { maximumAge: 120000, timeout: 6000 }
     );
   }, []);
 
@@ -79,7 +80,7 @@ export function EventsView({
   };
 
   const getEventCoords = (event) => {
-    if (event.coordinates) return event.coordinates;
+    if (event.coordinates && isValidCoords(event.coordinates)) return event.coordinates;
     const loc = event.facility?.location?.coordinates;
     if (loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number') {
       return [loc.latitude, loc.longitude];
@@ -93,6 +94,32 @@ export function EventsView({
     if (firstEventWithCoords) return getEventCoords(firstEventWithCoords);
     return [6.9271, 79.8612]; // Default to Colombo
   }, [userLocation, filteredEvents]);
+
+  // Sync with Facilities behavior: Sort by distance if user location is known
+  const mapEvents = useMemo(() => {
+    const eventsWithCoords = filteredEvents.map(e => ({ ...e, _coords: getEventCoords(e) }));
+    if (!userLocation) return eventsWithCoords;
+
+    const toRadians = (value) => (value * Math.PI) / 180;
+    const [userLat, userLon] = userLocation;
+
+    const distanceInKm = (event) => {
+      const [lat, lon] = event._coords || [];
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return Number.MAX_SAFE_INTEGER;
+      const earthRadiusKm = 6371;
+      const dLat = toRadians(lat - userLat);
+      const dLon = toRadians(lon - userLon);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(userLat)) *
+          Math.cos(toRadians(lat)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    };
+
+    return [...eventsWithCoords].sort((a, b) => distanceInKm(a) - distanceInKm(b));
+  }, [filteredEvents, userLocation]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -110,53 +137,53 @@ export function EventsView({
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl mb-4">Community Events</h1>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
-              Discover and join exciting events happening in your community
+            <h1 className="text-4xl md:text-5xl mb-4 font-bold tracking-tight">Community Events Hub</h1>
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8 font-medium">
+              Join interactive experiences and connect with your neighborhood
             </p>
-            <Link to="/create-event" className="inline-flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors shadow-lg">
-              <Plus className="w-5 h-5" />
-              Add Event
+            <Link to="/create-event" className="inline-flex items-center gap-2 bg-white text-blue-600 px-8 py-3.5 rounded-full font-bold hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl">
+              <Plus className="w-5 h-5 font-bold" />
+              Host New Event
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-8">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
+        <div className="bg-white rounded-[1.5rem] shadow-sm p-5 mb-10 relative z-20 border border-gray-100">
+          <div className="flex flex-col md:flex-row gap-5">
+            <div className="flex-1 relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-purple-600 transition-colors" />
               <Input
                 type="text"
-                placeholder="Search events..."
+                placeholder="Search by event title, host or location..."
                 value={searchTerm}
                 onChange={(e) => onSearchTermChange(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-12 bg-gray-50 border-gray-100 rounded-xl focus:ring-purple-500 font-medium"
               />
             </div>
             <Select value={filterType} onValueChange={onFilterTypeChange}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by type" />
+              <SelectTrigger className="w-full md:w-[220px] h-12 rounded-xl bg-gray-50 border-gray-100 font-medium">
+                <SelectValue placeholder="Event Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl border-gray-100 shadow-2xl z-[3000]">
                 {eventTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type === 'all' ? 'All Types' : type}
+                  <SelectItem key={type} value={type} className="font-medium focus:bg-purple-50">
+                    {type === 'all' ? 'All Categories' : type.charAt(0).toUpperCase() + type.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex gap-2">
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
               <button
                 onClick={() => onViewModeChange('grid')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'grid' ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'grid' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
               >
                 Grid
               </button>
               <button
                 onClick={() => onViewModeChange('map')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'map' ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'map' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
               >
                 Map
               </button>
@@ -165,8 +192,8 @@ export function EventsView({
         </div>
 
         {viewMode === 'map' ? (
-          <div className="bg-white rounded-[2.5rem] shadow-2xl border-8 border-white overflow-hidden mb-8 relative z-0">
-            <div className="h-[650px] relative z-0">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border-8 border-white overflow-hidden mb-12 relative z-0">
+            <div className="h-[700px] relative z-0">
               <MapContainer
                 center={mapCenter}
                 zoom={12}
@@ -179,44 +206,48 @@ export function EventsView({
                 />
                 <MapController center={mapCenter} />
                 <LocateControl onLocate={setUserLocation} />
-                {filteredEvents
-                  .map(event => ({ ...event, _mapCoords: getEventCoords(event) }))
-                  .filter(event => isValidCoords(event._mapCoords) || isValidCoords(mapCenter))
+                {mapEvents
+                  .filter(event => isValidCoords(event._coords) || isValidCoords(mapCenter))
                   .map((event) => (
                     <Marker 
                       key={event._id} 
-                      position={event._mapCoords || mapCenter}
+                      position={isValidCoords(event._coords) ? event._coords : mapCenter}
                       icon={eventIcon}
                     >
-                    <Popup className="custom-popup">
-                      <div className="p-2 min-w-[200px]">
-                        <div className="h-32 mb-3 overflow-hidden rounded-xl bg-gradient-to-r from-blue-400 to-purple-400">
+                    <Popup className="custom-popup" offset={[0, -5]}>
+                      <div className="p-3 min-w-[240px]">
+                        <div className="h-36 mb-4 overflow-hidden rounded-[1.25rem] relative group/map">
                            <img 
                               src={event.image || getEventImage(event.type)} 
                               alt={event.name}
-                              className="w-full h-full object-cover transition-transform hover:scale-110 duration-500" 
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover/map:scale-115" 
                            />
+                           <div className="absolute top-3 right-3">
+                              <Badge className="bg-white/95 backdrop-blur-md text-purple-600 border-none shadow-sm">
+                                  {event.type}
+                              </Badge>
+                           </div>
                         </div>
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-2 bg-purple-100 text-purple-700">
-                          {event.type}
-                        </span>
-                        <h3 className="font-bold text-slate-900 text-lg mb-1">{event.name}</h3>
-                        <div className="space-y-1.5 mb-4">
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <Calendar size={12} /> {new Date(event.schedule?.date).toLocaleDateString()}
+                        <h3 className="font-extrabold text-slate-900 text-xl mb-2 line-clamp-1">{event.name}</h3>
+                        <div className="space-y-2 mb-5">
+                          <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500">
+                             <div className="p-1 px-1.5 bg-gray-100 rounded-md text-slate-600"><Calendar size={12} /></div>
+                             {new Date(event.schedule?.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <Clock size={12} /> {event.schedule?.startTime} - {event.schedule?.endTime}
+                          <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500">
+                             <div className="p-1 px-1.5 bg-gray-100 rounded-md text-slate-600"><Clock size={12} /></div>
+                             {event.schedule?.startTime} - {event.schedule?.endTime}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <MapPin size={12} /> {event.facility?.name || 'Local Venue'}
+                          <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500">
+                             <div className="p-1 px-1.5 bg-gray-100 rounded-md text-slate-600"><MapPin size={12} /></div>
+                             <span className="truncate">{event.facility?.name || 'Local Community Spot'}</span>
                           </div>
                         </div>
                         <Link 
                           to={`/event/${event._id}`} 
-                          className="w-full py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-purple-200"
+                          className="w-full py-3.5 bg-purple-600 text-white rounded-xl font-black text-sm hover:bg-purple-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-200"
                         >
-                          View Details <ExternalLink size={14} />
+                          Discover More <ExternalLink size={16} />
                         </Link>
                       </div>
                     </Popup>
@@ -227,55 +258,60 @@ export function EventsView({
           </div>
         ) : (
           <>
-            <div className="mb-4">
-              <p className="text-gray-600">
-                Showing {Math.min(filteredEvents.length, ITEMS_PER_PAGE)} of {filteredEvents.length} events
+            <div className="mb-6 flex justify-between items-center">
+              <p className="text-gray-500 font-medium">
+                Displaying <span className="text-gray-900 font-bold">{Math.min(filteredEvents.length, ITEMS_PER_PAGE)}</span> of <span className="text-gray-900 font-bold">{filteredEvents.length}</span> curated events
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
               {paginatedEvents.map((event) => (
-                <Card key={event._id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="relative h-48 bg-gradient-to-r from-blue-400 to-purple-400">
+                <Card key={event._id} className="overflow-hidden border-none shadow-sm hover:shadow-2xl transition-all duration-500 group rounded-[1.5rem] bg-white h-full flex flex-col">
+                  <div className="relative h-56 overflow-hidden">
                     <img
                       src={event.image || getEventImage(event.type)}
                       alt={event.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
-                    <Badge className="absolute top-3 right-3 bg-white text-gray-900">
-                      {event.type}
-                    </Badge>
+                    <div className="absolute top-4 right-4">
+                        <Badge className="bg-white/95 backdrop-blur-md text-purple-600 font-bold border-none shadow-sm">
+                          {event.type}
+                        </Badge>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                        <span className="text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                             Learn More <ExternalLink size={14} />
+                        </span>
+                    </div>
                   </div>
-                  <CardContent className="p-6">
-                    <h3 className="text-xl mb-2">{event.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{event.description}</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
+                  <CardContent className="p-7 flex-1 flex flex-col">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors line-clamp-1">{event.name}</h3>
+                    <p className="text-gray-500 text-sm mb-6 line-clamp-2 font-medium leading-relaxed">{event.description}</p>
+                    <div className="space-y-3 mt-auto border-t pt-5 border-gray-50">
+                      <div className="flex items-center gap-3 text-sm font-bold text-gray-600">
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600"><Calendar className="w-4 h-4" /></div>
                         <span>{new Date(event.schedule?.date).toLocaleDateString()}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4" />
+                      <div className="flex items-center gap-3 text-sm font-bold text-gray-600">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600"><Clock className="w-4 h-4" /></div>
                         <span>{event.schedule?.startTime} - {event.schedule?.endTime}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <MapPin className="w-4 h-4" />
-                        <span>{event.facility?.name || 'TBA'}</span>
+                      <div className="flex items-center gap-3 text-sm font-bold text-gray-600">
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600"><MapPin className="w-4 h-4" /></div>
+                        <span className="truncate">{event.facility?.name || 'Local Venue'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Users className="w-4 h-4" />
-                        <span>
-                          {event.attendance?.currentAttendees || 0}/{event.attendance?.maxAttendees || 0} attending
-                        </span>
+                      <div className="flex items-center gap-3 text-sm font-bold text-gray-600">
+                        <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600"><Users className="w-4 h-4" /></div>
+                        <span>{event.attendance?.currentAttendees || 0}/{event.attendance?.maxAttendees || 0} Joined</span>
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="p-6 pt-0">
+                  <CardFooter className="p-7 pt-0">
                     <Link
                       to={`/event/${event._id}`}
-                      className="w-full inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-white hover:from-blue-700 hover:to-purple-700 transition-colors"
+                      className="w-full inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3.5 text-white font-black shadow-lg hover:from-blue-700 hover:to-purple-700 hover:shadow-2xl hover:-translate-y-0.5 transition-all"
                     >
-                      View Details & Register
+                      Book Ticket Now
                     </Link>
                   </CardFooter>
                 </Card>
@@ -293,8 +329,10 @@ export function EventsView({
         )}
 
         {filteredEvents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No events found matching your criteria.</p>
+          <div className="text-center py-24 bg-white rounded-[2rem] shadow-sm border-2 border-dashed border-gray-100">
+            <Search className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No Matching Events</h3>
+            <p className="text-gray-500 font-medium max-w-xs mx-auto text-sm">Try adjusting your filters or search keywords to find what you're looking for.</p>
           </div>
         )}
       </div>
