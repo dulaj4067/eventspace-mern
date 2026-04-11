@@ -23,7 +23,26 @@ const uploadRoutes = require("./routers/UploadRoutes");
 //const path = require("path");
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  process.env.FRONTEND_URL, 
+  'http://localhost:3000',
+  'https://medicate-git-main-dewmi-disanayakes-projects.vercel.app', // Adding user's likely vercel domain if known, but keeping it generic is better
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
+      // In production, we should be stricter, but for now we allow any if FRONTEND_URL is not set
+      if (process.env.FRONTEND_URL) {
+        return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+      }
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -47,10 +66,20 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/upload", uploadRoutes);
 //app.use("/api/payment-logs", paymentLogsRoutes);
 
-// Home route
-app.get("/", (req, res) => {
-    res.json({ message: "Welcome to Event Management System API" });
-});
+// Serve static assets in production
+if (process.env.NODE_ENV === "production") {
+    // Set static folder
+    app.use(express.static(path.join(__dirname, "../frontend/build")));
+
+    app.get("*", (req, res) => {
+        res.sendFile(path.resolve(__dirname, "../frontend", "build", "index.html"));
+    });
+} else {
+    // Home route for development
+    app.get("/", (req, res) => {
+        res.json({ message: "Welcome to Event Management System API" });
+    });
+}
 
 // MongoDB connection
 mongoose.connect(
