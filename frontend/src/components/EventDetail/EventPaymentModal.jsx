@@ -139,6 +139,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
 
   const handlePay = async () => {
     setPaymentError('');
+    const API_BASE_URL = process.env.REACT_APP_API_URL || '';
     if (tab === 'slip') {
       if (!slipFile) { setPaymentError('Please upload your bank transfer slip before submitting.'); return; }
       await handleBankSlip();
@@ -159,7 +160,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
       if (!userId) throw new Error('Unable to identify user. Please log in again.');
 
       // Step 1 — Create Stripe PaymentIntent for event
-      const intentRes = await fetch('/api/payments/create-event-intent', {
+      const intentRes = await fetch(`${API_BASE_URL}/api/payments/create-event-intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ eventId, userId, amount, paymentMethod: 'card' }),
@@ -176,13 +177,13 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
       });
 
       if (error) {
-        await fetch(`/api/payments/${paymentId}/fail`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+        await fetch(`${API_BASE_URL}/api/payments/${paymentId}/fail`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
         throw new Error(error.message);
       }
       if (paymentIntent.status !== 'succeeded') throw new Error(`Payment not completed. Status: ${paymentIntent.status}`);
 
       // Step 3 — Confirm on backend
-      const confirmRes = await fetch(`/api/payments/${paymentId}/confirm`, {
+      const confirmRes = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ stripePaymentIntentId: paymentIntent.id }),
@@ -210,7 +211,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
 
       // Step 1 — Create pending payment record using the correct event-registration endpoint
       // FIX: was POST /api/payments (venue booking route) which requires bookingId, not eventId
-      const paymentRes = await fetch('/api/payments/event-registration', {
+      const paymentRes = await fetch(`${API_BASE_URL}/api/payments/event-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -229,7 +230,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
       // Step 2 — Upload slip
       const formData = new FormData();
       formData.append('bankSlip', slipFile);
-      const uploadRes = await fetch(`/api/payments/${paymentId}/upload-slip`, {
+      const uploadRes = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/upload-slip`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -248,7 +249,7 @@ function EventCheckoutForm({ eventId, eventName, amount, currency, onSuccess, on
   };
 
   const completeRegistration = async (token, userId, paymentId) => {
-    const regRes = await fetch(`/api/events/${eventId}/register`, {
+    const regRes = await fetch(`${API_BASE_URL}/api/events/${eventId}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ userId, paymentId }),

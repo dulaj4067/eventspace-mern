@@ -82,7 +82,8 @@ export function FacilityRatings({ facilityId }) {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/ratings/facility/${facilityId}`);
+      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/ratings/facility/${facilityId}`);
       const payload = await res.json();
       if (res.ok && payload.success) setData(payload.data);
     } catch {

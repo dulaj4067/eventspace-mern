@@ -50,7 +50,8 @@ export function ReviewModal({ booking, onClose, onSubmitted }) {
     setSubmitting(true);
     try {
       const token = sessionStorage.getItem('token');
-      const res = await fetch('/api/ratings', {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/ratings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

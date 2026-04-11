@@ -24,15 +24,23 @@ const communityRoutes = require("./routers/CommunityRoutes");
 // Middleware
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://eventspace-mern.vercel.app',
+  'http://localhost:3000'
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || !process.env.FRONTEND_URL) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+    if (!origin) return callback(null, true);
+    // Allow any vercel deployment URL dynamically or localhost
+    if (
+      origin.includes('vercel.app') || 
+      origin.includes('localhost') ||
+      allowedOrigins.indexOf(origin) !== -1 ||
+      process.env.NODE_ENV !== 'production'
+    ) {
       return callback(null, true);
     }
-    return callback(new Error('CORS blocked'), false);
+    return callback(new Error(`CORS blocked for origin: ${origin}`), false);
   },
   credentials: true
 }));
