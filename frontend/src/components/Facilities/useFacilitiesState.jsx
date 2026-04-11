@@ -143,6 +143,7 @@ function dedupeById(items) {
 }
 
 export function useFacilitiesState() {
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
@@ -159,7 +160,6 @@ export function useFacilitiesState() {
         setIsLoading(true);
         setErrorMessage('');
 
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
         const response = await fetch(`${API_BASE_URL}/api/facilities?limit=100`);
         const payload = await response.json();
 
@@ -256,7 +256,6 @@ export function useFacilitiesState() {
 
     const timer = setTimeout(async () => {
       try {
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
         const autocompleteResponse = await fetch(
           `${API_BASE_URL}/api/location/autocomplete?query=${encodeURIComponent(searchTerm.trim())}`,
         );
@@ -268,7 +267,6 @@ export function useFacilitiesState() {
         }
 
         const selectedAddress = autocompletePayload.data[0].displayName;
-        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
         const nearbyResponse = await fetch(`${API_BASE_URL}/api/location/search-by-address`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
