@@ -11,7 +11,7 @@ export function useBookingsState() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const response = await fetch('/api/bookings/my', { //fix to get only user own bookings
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -42,7 +42,7 @@ export function useBookingsState() {
 
   const cancelBooking = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`/api/bookings/${id}/cancel`, {
         method: 'PATCH',
         headers: {

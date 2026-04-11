@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 const getUserFromToken = () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return null;
     return JSON.parse(atob(token.split('.')[1]));
   } catch {

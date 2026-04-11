@@ -20,7 +20,7 @@ export function useBookingCalendarState() {
     useEffect(() => {
         const fetchCalendarBookings = async () => {
             try {
-                const token = localStorage.getItem('token');
+                const token = sessionStorage.getItem('token');
                 const response = await fetch('/api/bookings/calendar', {
                     headers: { Authorization: `Bearer ${token}` },
                 });

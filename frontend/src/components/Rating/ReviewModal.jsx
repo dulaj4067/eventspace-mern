@@ -49,7 +49,7 @@ export function ReviewModal({ booking, onClose, onSubmitted }) {
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch('/api/ratings', {
         method: 'POST',
         headers: {
