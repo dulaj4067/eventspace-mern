@@ -12,6 +12,7 @@ import { facilityIcon, eventIcon, MAP_TILES } from '../../utils/mapUtils';
 
 export function Home() {
   applyLeafletDefaultIcon();
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
   const [mapLocations, setMapLocations] = useState([]);
   const [mapLoading, setMapLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
@@ -25,7 +26,7 @@ export function Home() {
         setMapLoading(true);
         
         // Fetch Facilities
-        const facResponse = await fetch('/api/facilities?limit=100');
+        const facResponse = await fetch(`${API_BASE_URL}/api/facilities?limit=100`);
         let dbFacilities = [];
         if (facResponse.ok && facResponse.headers.get('content-type')?.includes('application/json')) {
           const facPayload = await facResponse.json();
