@@ -20,7 +20,6 @@ const timeSlots = [
 ];
 
 const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-const FALLBACK_URL = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
 
 export function FacilityDetail() {
   const { id } = useParams();
@@ -37,7 +36,7 @@ export function FacilityDetail() {
     date: '', startTime: '', endTime: '', purpose: '', attendees: '',
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const pendingBookingRef = useRef(null);
 
@@ -154,11 +153,6 @@ export function FacilityDetail() {
   // ── Normalized facility ─────────────────────────────────────────────────────
   const normalizedFacility = useMemo(() => {
     if (!facility) return null;
-    const image =
-      facility.primaryImage ||
-      facility.images?.find((i) => i.isPrimary)?.url ||
-      facility.images?.[0]?.url ||
-      'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
     const hourlyRate = facility.pricing?.hourlyRate ?? facility.hourlyRate ?? 0;
     return {
       ...facility,
@@ -168,7 +162,7 @@ export function FacilityDetail() {
         ...nearbyPlaces.map((p) => p.type).filter(Boolean).slice(0, 2).map((t) => `Nearby ${t}`),
       ],
     };
-  }, [facility]);
+  }, [facility, nearbyPlaces]);
 
   const todaySchedule = useMemo(() => {
     if (!normalizedFacility?.availability?.schedule) return null;

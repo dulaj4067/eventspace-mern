@@ -44,8 +44,7 @@ export function EventAttendees() {
       }
     };
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-screen text-purple-600 text-xl">
