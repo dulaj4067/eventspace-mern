@@ -12,7 +12,8 @@ export function useBookingsState() {
     const fetchBookings = async () => {
       try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('/api/bookings/my', { //fix to get only user own bookings
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const response = await fetch(`${API_BASE_URL}/api/bookings/my`, { //fix to get only user own bookings
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
@@ -43,7 +44,8 @@ export function useBookingsState() {
   const cancelBooking = useCallback(async (id) => {
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`/api/bookings/${id}/cancel`, {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${id}/cancel`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -81,7 +83,8 @@ export function useBookingsState() {
   const deleteBooking = useCallback(async (id) => {
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`/api/bookings/${id}/cancelled`, {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${id}/cancelled`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

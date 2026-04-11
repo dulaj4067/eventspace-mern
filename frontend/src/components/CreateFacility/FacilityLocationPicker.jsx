@@ -76,7 +76,8 @@ export function FacilityLocationPicker({ value, onChange, disabled }) {
   const enrichFromCoordinates = async (latitude, longitude, displayLabel) => {
     setResolving(true);
     try {
-      const res = await fetch('/api/location/reverse', {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/location/reverse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude, longitude }),
@@ -126,7 +127,8 @@ export function FacilityLocationPicker({ value, onChange, disabled }) {
     if (q.length < 3) return;
     setResolving(true);
     try {
-      const res = await fetch('/api/location/geocode', {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/location/geocode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: q }),

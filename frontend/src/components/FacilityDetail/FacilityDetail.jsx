@@ -56,7 +56,8 @@ export function FacilityDetail() {
           return;
         }
         const token = sessionStorage.getItem('token');
-        const res = await fetch(`/api/facilities/${id}`, {
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const res = await fetch(`${API_BASE_URL}/api/facilities/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const payload = await res.json();
@@ -91,7 +92,8 @@ export function FacilityDetail() {
 
     (async () => {
       try {
-        const res = await fetch('/api/location/reverse', {
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const res = await fetch(`${API_BASE_URL}/api/location/reverse`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ latitude: lat, longitude: lon }),

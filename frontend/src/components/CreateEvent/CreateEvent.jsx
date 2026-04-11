@@ -70,7 +70,8 @@ export function CreateEvent() {
       if (imageFile) {
         const fd = new FormData();
         fd.append('image', imageFile);
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const uploadRes = await fetch(`${API_BASE_URL}/api/upload`, { method: 'POST', body: fd });
         const uploadData = await uploadRes.json();
         
         if (uploadData.success) {

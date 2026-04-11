@@ -159,7 +159,8 @@ export function useFacilitiesState() {
         setIsLoading(true);
         setErrorMessage('');
 
-        const response = await fetch('/api/facilities?limit=100');
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const response = await fetch(`${API_BASE_URL}/api/facilities?limit=100`);
         const payload = await response.json();
 
         if (!response.ok || !payload.success) {
@@ -255,8 +256,9 @@ export function useFacilitiesState() {
 
     const timer = setTimeout(async () => {
       try {
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
         const autocompleteResponse = await fetch(
-          `/api/location/autocomplete?query=${encodeURIComponent(searchTerm.trim())}`,
+          `${API_BASE_URL}/api/location/autocomplete?query=${encodeURIComponent(searchTerm.trim())}`,
         );
         const autocompletePayload = await autocompleteResponse.json();
 
@@ -266,7 +268,8 @@ export function useFacilitiesState() {
         }
 
         const selectedAddress = autocompletePayload.data[0].displayName;
-        const nearbyResponse = await fetch('/api/location/search-by-address', {
+        const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+        const nearbyResponse = await fetch(`${API_BASE_URL}/api/location/search-by-address`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address: selectedAddress, radiusKm: 20 }),

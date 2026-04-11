@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 // ─── Load Stripe once outside component (never recreate on render) ────────────
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
@@ -72,7 +74,7 @@ const resolveUserId = (token) => {
 // ─── Cancel a dangling booking on payment failure ─────────────────────────────
 const cancelBooking = async (bookingId, token, reason) => {
   try {
-    await fetch(`/api/bookings/${bookingId}/cancel`, {
+    await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/cancel`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ reason }),
@@ -263,7 +265,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       if (!userId) throw new Error('Unable to identify user. Please log in again.');
 
       // Step 1 — Create booking
-      const bookingRes = await fetch('/api/bookings', {
+      const bookingRes = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(bookingPayload),
@@ -275,7 +277,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       bookingId = bookingData.data._id;
 
       // Step 2 — Create PaymentIntent on backend
-      const intentRes = await fetch('/api/payments/create-intent', {
+      const intentRes = await fetch(`${API_BASE_URL}/api/payments/create-intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ bookingId, userId, amount: grandTotal, paymentMethod: 'card' }),
@@ -300,7 +302,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       // Step 4 — Handle Stripe response
       if (error) {
         await cancelBooking(bookingId, token, `Stripe error: ${error.message}`);
-        await fetch(`/api/payments/${paymentId}/fail`, {
+        await fetch(`${API_BASE_URL}/api/payments/${paymentId}/fail`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => {});
@@ -313,7 +315,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       }
 
       // Step 5 — Confirm success on backend
-      const confirmRes = await fetch(`/api/payments/${paymentId}/confirm`, {
+      const confirmRes = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ stripePaymentIntentId: paymentIntent.id }),
@@ -348,7 +350,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       if (!userId) throw new Error('Unable to identify user. Please log in again.');
 
       // Step 1 — Create booking
-      const bookingRes = await fetch('/api/bookings', {
+      const bookingRes = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(bookingPayload),
@@ -360,7 +362,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       bookingId = bookingData.data._id;
 
       // Step 2 — Create pending payment record (status: 'pending', no Stripe involved)
-      const paymentRes = await fetch('/api/payments', {
+      const paymentRes = await fetch(`${API_BASE_URL}/api/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -384,7 +386,7 @@ function CheckoutForm({ totalCost, duration, hourlyRate, facilityName, onPayment
       const formData = new FormData();
       formData.append('bankSlip', slipFile);
 
-      const uploadRes = await fetch(`/api/payments/${paymentId}/upload-slip`, {
+      const uploadRes = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/upload-slip`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
