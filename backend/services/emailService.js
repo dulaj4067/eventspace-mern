@@ -1,8 +1,8 @@
 const sgMail = require('@sendgrid/mail');
-if (process.env.SENDGRID_API_KEY) {
+if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.startsWith('SG.')) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 } else {
-  console.warn('[emailService] SENDGRID_API_KEY is missing. Emails will not be sent.');
+  console.warn('[emailService] SENDGRID_API_KEY is missing or invalid (must start with SG.). Emails will not be sent.');
 }
 
 exports.sendRegistrationConfirmation = async (userEmail, userName, eventName, eventDate) => {

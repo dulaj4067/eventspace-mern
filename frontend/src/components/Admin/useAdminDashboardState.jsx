@@ -11,10 +11,10 @@ const API_BASE = '/api';
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 const DEFAULT_MAP_BBOX = {
-  minLat: 40.65,
-  minLon: -74.05,
-  maxLat: 40.78,
-  maxLon: -73.92,
+  minLat: 6.80,
+  minLon: 79.75,
+  maxLat: 7.15,
+  maxLon: 80.05,
 };
 
 function getGoogleStreetViewImage(latitude, longitude) {

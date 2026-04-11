@@ -23,22 +23,16 @@ const communityRoutes = require("./routers/CommunityRoutes");
 
 // Middleware
 const allowedOrigins = [
-  process.env.FRONTEND_URL, 
-  'http://localhost:3000',
-  'https://medicate-git-main-dewmi-disanayakes-projects.vercel.app', // Adding user's likely vercel domain if known, but keeping it generic is better
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
-      // In production, we should be stricter, but for now we allow any if FRONTEND_URL is not set
-      if (process.env.FRONTEND_URL) {
-        return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
-      }
+    if (!origin || !process.env.FRONTEND_URL) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
     }
-    return callback(null, true);
+    return callback(new Error('CORS blocked'), false);
   },
   credentials: true
 }));
@@ -81,9 +75,12 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // MongoDB connection
-mongoose.connect(
-    process.env.MONGODB_URI || "mongodb+srv://admin:U4QUAjyNc3bfNRKx@cluster0.sjyibwg.mongodb.net/eventspace?retryWrites=true&w=majority"
-)
+if (!process.env.MONGODB_URI) {
+    console.error("CRITICAL ERROR: MONGODB_URI is not defined in environment variables.");
+    process.exit(1);
+}
+
+mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log("Connected to MongoDB"))
     .then(() => {
         const PORT = process.env.PORT || 5000;

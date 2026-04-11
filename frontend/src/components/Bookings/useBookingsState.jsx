@@ -80,7 +80,7 @@ export function useBookingsState() {
   // Only available for cancelled bookings. Calls DELETE /api/bookings/:id/cancelled.
   const deleteBooking = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`/api/bookings/${id}/cancelled`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }

@@ -3,7 +3,7 @@ import axios from 'axios';
 const API = '/api/community';
 
 const authAxios = () => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   return axios.create({
     headers: {
       Authorization: token ? `Bearer ${token}` : '',
