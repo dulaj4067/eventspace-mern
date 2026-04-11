@@ -7,6 +7,7 @@ const {
     createPayment,
     uploadBankSlip,
     createPaymentIntent,
+    createEventPaymentIntent,
     confirmPayment,
     failPayment,
     createEventRegistrationPayment,
@@ -60,16 +61,24 @@ router.get("/", verifyToken, isAdmin, getAllPayments);
 
 // ── Event registration ─────────────────────────────────────────────────────────
 router.post("/event-registration", verifyToken, createEventRegistrationPayment);
+router.post('/create-event-intent', verifyToken, createEventPaymentIntent);
 router.get("/event/:eventId", verifyToken, getPaymentsByEventId);
+
+// ── Stripe payment intent for venue booking ────────────────────────────────────
+// FIX: This route was missing — caused POST /api/payments/create-intent → 404
+router.post('/create-intent', verifyToken, createPaymentIntent);
 
 // ── User payments ──────────────────────────────────────────────────────────────
 router.get("/user/:userId", verifyToken, getPaymentsByUserId);
 router.get("/received", verifyToken, getReceivedPayments);
 
-// Venue booking payment route
+// ── Venue booking payment (bank / manual) ─────────────────────────────────────
 router.post("/", verifyToken, createPayment);
 
 // ── Specific payment actions ───────────────────────────────────────────────────
+// IMPORTANT: all named routes above must come BEFORE /:id routes.
+// Express matches top-to-bottom — if /:id were first, "create-intent",
+// "received", "event-registration" etc. would all be caught as IDs.
 router.get("/:id", verifyToken, getPaymentById);
 router.post("/:id/confirm", verifyToken, confirmPayment);
 router.post("/:id/fail", verifyToken, failPayment);
