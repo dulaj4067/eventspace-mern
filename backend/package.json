@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "author": "",
   "license": "ISC",
@@ -26,9 +27,11 @@
     "mongoose": "^9.2.1",
     "motion": "^12.34.0",
     "multer": "^2.1.1",
-    "nodemon": "^3.1.11",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.13.0",
     "stripe": "^20.4.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
