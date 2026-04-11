@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, MapPin, Calendar, Users, Clock, ArrowRight, ExternalLink } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import logo from '../../assets/logo.png';
 import { applyLeafletDefaultIcon } from './leafletDefaultIcon.jsx';
 import { InteractiveTile } from './InteractiveTile.jsx';
@@ -111,6 +110,7 @@ export function Home() {
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -124,6 +124,7 @@ export function Home() {
       },
       { maximumAge: 120000, timeout: 6000 },
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export function Home() {
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sortedMapLocations = useMemo(() => {

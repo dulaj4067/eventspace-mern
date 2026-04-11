@@ -1,11 +1,16 @@
-import { algoliasearch } from 'algoliasearch';
+const { algoliasearch } = require('algoliasearch');
 
-const client = algoliasearch(
-  process.env.ALGOLIA_APP_ID,
-  process.env.ALGOLIA_ADMIN_KEY
-);
+let client = null;
+if (process.env.ALGOLIA_APP_ID && process.env.ALGOLIA_ADMIN_KEY) {
+  client = algoliasearch(
+    process.env.ALGOLIA_APP_ID,
+    process.env.ALGOLIA_ADMIN_KEY
+  );
+} else {
+  console.warn('[SearchController] Algolia credentials missing. Search will be disabled.');
+}
 
-export const algoliaSearch = async (req, res) => {
+const algoliaSearch = async (req, res) => {
   const { query = '', type, category } = req.query;
 
   const filters = type ? `type:"${type}"` : '';
@@ -31,6 +36,10 @@ export const algoliaSearch = async (req, res) => {
       });
     }
 
+    if (!client) {
+      return res.status(503).json({ success: false, message: 'Search service is currently unavailable.' });
+    }
+
     const { results } = await client.search({ requests });
 
     return res.status(200).json({
@@ -44,4 +53,8 @@ export const algoliaSearch = async (req, res) => {
       error: error.message
     });
   }
+};
+
+module.exports = {
+  algoliaSearch
 };

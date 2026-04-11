@@ -44,6 +44,7 @@ export function EventAttendees() {
       }
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) return (
