@@ -2,11 +2,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://BACKEND_URL/api/:path*"
+      "destination": "https://eventspace-mern-production.up.railway.app/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://BACKEND_URL/uploads/:path*"
+      "destination": "https://eventspace-mern-production.up.railway.app/uploads/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
