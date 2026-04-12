@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
 import { Calendar, Clock, Users, MapPin, Tag, Image as ImageIcon, DollarSign, Crop, X } from 'lucide-react';
 import Cropper from 'react-easy-crop';
+import { toast } from 'sonner';
+import { createEvent } from '../../services/eventService';
+import axios from 'axios';
 
 const createImage = (url) =>
   new Promise((resolve, reject) => {
@@ -48,9 +51,6 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     }, 'image/jpeg');
   });
 }
-import { toast } from 'sonner';
-import { createEvent } from '../../services/eventService';
-import axios from 'axios';
 
 export function CreateEvent() {
   const navigate = useNavigate();
