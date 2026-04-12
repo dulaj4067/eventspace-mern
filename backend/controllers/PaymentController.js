@@ -239,20 +239,9 @@ const confirmPayment = async (req, res) => {
         payment.paidAt = new Date();
         await payment.save();
 
-        // ─── CRITICAL FIX: Confirm the booking if this is a venue-booking ──────
-        if (payment.paymentType === 'venue-booking' && payment.bookingId) {
-            const booking = await Booking.findById(payment.bookingId);
-            if (booking && booking.status !== 'confirmed') {
-                booking.status = 'confirmed';
-                booking.statusHistory.push({
-                    status: 'confirmed',
-                    changedAt: new Date(),
-                    changedBy: payment.userId,
-                    reason: 'Payment confirmed via Stripe.'
-                });
-                await booking.save();
-            }
-        }
+        // ───────────────────────────────────────────────────────────────
+        // NOTE: Booking status is NOT automatically set to 'confirmed' here.
+        // The admin must manually approve the booking via the Admin Dashboard.
         // ───────────────────────────────────────────────────────────────
 
         await new PaymentLogs({
@@ -497,28 +486,9 @@ const updatePaymentStatus = async (req, res) => {
 
         await payment.save();
 
-        // ─── CRITICAL FIX: Confirm or update the booking status ──────
-        if (payment.paymentType === 'venue-booking' && payment.bookingId) {
-            const booking = await Booking.findById(payment.bookingId);
-            if (booking) {
-                // Map payment status to booking status if needed
-                // For now, if payment is completed, booking is confirmed
-                if (paymentStatus === 'completed' && booking.status !== 'confirmed') {
-                    booking.status = 'confirmed';
-                    booking.statusHistory.push({
-                        status: 'confirmed',
-                        changedAt: new Date(),
-                        changedBy: req.user?._id || payment.userId, // req.user is admin here
-                        reason: 'Payment status manually updated to completed by admin.'
-                    });
-                    await booking.save();
-                } else if (paymentStatus === 'refunded' && booking.status !== 'cancelled') {
-                    // Optional: cancel booking if refunded?
-                    // booking.status = 'cancelled';
-                    // await booking.save();
-                }
-            }
-        }
+        // ───────────────────────────────────────────────────────────────
+        // NOTE: Booking status is NOT automatically set to 'confirmed' here.
+        // Even when payment is approved, admin must separately review and approve the booking.
         // ───────────────────────────────────────────────────────────────
 
         await new PaymentLogs({
@@ -556,20 +526,8 @@ const processPayment = async (req, res) => {
             payment.paidAt = new Date();
             await payment.save();
 
-            // ─── CRITICAL FIX: Confirm the booking if this is a venue-booking ──────
-            if (payment.paymentType === 'venue-booking' && payment.bookingId) {
-                const booking = await Booking.findById(payment.bookingId);
-                if (booking && booking.status !== 'confirmed') {
-                    booking.status = 'confirmed';
-                    booking.statusHistory.push({
-                        status: 'confirmed',
-                        changedAt: new Date(),
-                        changedBy: payment.userId,
-                        reason: 'Mock payment processed successfully.'
-                    });
-                    await booking.save();
-                }
-            }
+            // ───────────────────────────────────────────────────────────────
+            // NOTE: Booking status is NOT automatically set to 'confirmed' here.
             // ───────────────────────────────────────────────────────────────
 
             const logMessage = payment.paymentType === 'event-registration'

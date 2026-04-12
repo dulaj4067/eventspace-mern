@@ -320,7 +320,7 @@ export function Home() {
                         </div>
                       )}
                       <Link 
-                        to={location.type === 'event' ? `/events/${location.id}` : `/facilities/${location.id}`} 
+                        to={location.type === 'event' ? `/event/${location.id}` : `/facility/${location.id}`} 
                         className={`w-full py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                           location.type === 'event' 
                             ? 'bg-purple-600 text-white hover:bg-purple-700' 
