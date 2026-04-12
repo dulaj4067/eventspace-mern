@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { getAssetUrl } from '../../utils/assetUtils';
 
 const FALLBACK_URL = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800';
 
 export function FacilityImage({ facility, className }) {
   const facilityImage = 
-    facility.image || 
-    facility.primaryImage || 
-    facility.images?.find((item) => item.isPrimary)?.url || 
-    facility.images?.[0]?.url;
+    getAssetUrl(
+      facility.image || 
+      facility.primaryImage || 
+      facility.images?.find((item) => item.isPrimary)?.url || 
+      facility.images?.[0]?.url
+    );
 
   const [imgSrc, setImgSrc] = useState(facilityImage || FALLBACK_URL);
 

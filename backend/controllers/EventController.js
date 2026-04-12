@@ -466,10 +466,21 @@ exports.publishEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot publish a cancelled event' });
 
     // ── Booking Validation ──────────────────────────────────────────
-    const booking = await Booking.findById(event.booking);
+    let booking = await Booking.findById(event.booking);
+    
+    // ─── LINKAGE FALLBACK ───────────────────────────────────────────
+    // If no booking linked directly, try to find one that references this event
+    if (!booking) {
+      booking = await Booking.findOne({ event: event._id });
+      if (booking) {
+        event.booking = booking._id;
+        await event.save();
+      }
+    }
+    // ───────────────────────────────────────────────────────────────
 
     if (!booking)
-      return res.status(400).json({ success: false, message: 'No booking linked to this event' });
+      return res.status(400).json({ success: false, message: 'No booking linked to this event. Please book a facility first.' });
 
     if (booking.status !== 'confirmed') {
       // Defensive check: Maybe the payment is completed but booking status didn't update (previous bug)

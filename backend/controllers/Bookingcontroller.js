@@ -116,6 +116,14 @@ const createBooking = async (req, res) => {
 
         const savedBooking = await newBooking.save();
 
+        // ─── LINK TO EVENT ──────────────────────────────────────────
+        // If this booking is for an event, update the Event document
+        if (event) {
+            const Event = require('../models/Event');
+            await Event.findByIdAndUpdate(event, { booking: savedBooking._id });
+        }
+        // ─────────────────────────────────────────────────────────────
+
         res.status(201).json({
             success: true,
             message: 'Booking created successfully',

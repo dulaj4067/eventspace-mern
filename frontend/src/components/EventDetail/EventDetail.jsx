@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { getEventById, registerForEvent, deleteEvent, publishEvent, cancelEvent } from '../../services/eventService';
 import { Calendar, Clock, MapPin, Users, ArrowLeft, Pencil, Trash2, Tag, CheckCircle2 } from 'lucide-react';
+import { getAssetUrl } from '../../utils/assetUtils';
+import { getEventImage } from '../../services/eventService';
 import { toast } from 'sonner';
 import { EventPaymentModal } from './EventPaymentModal.jsx';
 
@@ -254,6 +256,15 @@ export function EventDetail() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Hero Image */}
+        <div className="h-64 md:h-96 rounded-2xl overflow-hidden shadow-2xl mb-8 relative group">
+          <img 
+            src={getAssetUrl(event.image) || getEventImage(event.type)} 
+            alt={event.name} 
+            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        </div>
 
         {/* ── Already registered banner ────────────────────────────────────── */}
         {isRegistered && !isOrganizer && (
