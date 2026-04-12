@@ -471,8 +471,23 @@ exports.publishEvent = async (req, res) => {
     if (!booking)
       return res.status(400).json({ success: false, message: 'No booking linked to this event' });
 
-    if (booking.status !== 'confirmed')
-      return res.status(400).json({ success: false, message: 'Booking must be confirmed before publishing event' });
+    if (booking.status !== 'confirmed') {
+      // Defensive check: Maybe the payment is completed but booking status didn't update (previous bug)
+      const Payment = require('../models/Payments');
+      const payment = await Payment.findOne({ bookingId: booking._id, paymentStatus: 'completed' });
+      
+      if (payment) {
+        booking.status = 'confirmed';
+        booking.statusHistory.push({
+          status: 'confirmed',
+          changedBy: event.organizer,
+          reason: 'Auto-confirmed during publish because a completed payment was found.'
+        });
+        await booking.save();
+      } else {
+        return res.status(400).json({ success: false, message: 'Booking must be confirmed before publishing event' });
+      }
+    }
 
     if (new Date(booking.date).toDateString() !== new Date(event.schedule.date).toDateString())
       return res.status(400).json({ success: false, message: 'Booking date does not match event date' });

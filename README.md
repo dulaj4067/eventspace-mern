@@ -1,4 +1,4 @@
-
+```text
   ______               _    _____                      
  |  ____|             | |  / ____|                     
  | |__ __   _____ _ __| |_| (___  _ __   __ _  ___ ___ 
@@ -7,7 +7,7 @@
  |______|\_/ \___|_|   \__|_____/| .__/ \__,_|\___\___|
                                  | |                   
                                  |_|                   
-
+```
 
 # Event Management System
 
@@ -330,3 +330,4 @@ node tests/performance/load_test.js
 
 ## 📝 Note on "No-Save" Dependencies
 The automation script uses `npm install --no-save`. This means testing libraries (`jest`, `supertest`, etc.) are installed to your `node_modules` for execution but are **not added to your `package.json`**, respecting the project's established structure.
+

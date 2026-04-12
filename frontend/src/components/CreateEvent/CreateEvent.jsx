@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
@@ -6,7 +6,48 @@ import { Label } from '../ui/label.jsx';
 import { Textarea } from '../ui/textarea.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
-import { Calendar, Clock, Users, MapPin, Tag, Image as ImageIcon, DollarSign } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Tag, Image as ImageIcon, DollarSign, Crop, X } from 'lucide-react';
+import Cropper from 'react-easy-crop';
+
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
+    image.src = url;
+  });
+
+async function getCroppedImg(imageSrc, pixelCrop) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return null;
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height,
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      }
+    }, 'image/jpeg');
+  });
+}
 import { toast } from 'sonner';
 import { createEvent } from '../../services/eventService';
 import axios from 'axios';
@@ -14,6 +55,12 @@ import axios from 'axios';
 export function CreateEvent() {
   const navigate = useNavigate();
   const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
@@ -32,6 +79,39 @@ export function CreateEvent() {
   });
 
   const eventTypes = ['conference', 'seminar', 'workshop', 'concert', 'exhibition', 'sports', 'social', 'other'];
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setCropImageSrc(url);
+      setCropperOpen(true);
+      e.target.value = '';
+    }
+  };
+
+  const showCroppedImage = async () => {
+    try {
+      if (!cropImageSrc || !croppedAreaPixels) return;
+      const croppedBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels);
+      const croppedFile = new File([croppedBlob], 'cover.jpg', { type: 'image/jpeg' });
+      setImageFile(croppedFile);
+      setImagePreview(URL.createObjectURL(croppedBlob));
+      setCropperOpen(false);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to crop image');
+    }
+  };
+
+  const cancelCrop = () => {
+    setCropperOpen(false);
+    setCropImageSrc(null);
+  };
 
   useEffect(() => {
     const fetchFacilities = async () => {
@@ -150,10 +230,67 @@ export function CreateEvent() {
                     id="image"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files[0])}
+                    onChange={handleImageChange}
                     className="pl-10 cursor-pointer"
                   />
                 </div>
+
+                {cropperOpen ? (
+                  <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden flex flex-col relative shadow-sm">
+                    <div className="relative h-64 w-full overflow-hidden bg-slate-50">
+                      <div
+                        className="absolute inset-0 bg-cover bg-center blur-md opacity-50 transform scale-110"
+                        style={{ backgroundImage: `url(${cropImageSrc})` }}
+                      />
+                      <div className="absolute inset-0 backdrop-blur-sm bg-white/30 z-0" />
+
+                      <Cropper
+                        image={cropImageSrc}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={16 / 9}
+                        onCropChange={setCrop}
+                        onCropComplete={onCropComplete}
+                        onZoomChange={setZoom}
+                        style={{ containerStyle: { backgroundColor: 'transparent' } }}
+                      />
+                    </div>
+                    <div className="p-4 bg-white flex justify-end gap-2 border-t relative z-10">
+                      <Button type="button" variant="outline" onClick={cancelCrop}>
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                        onClick={showCroppedImage}
+                      >
+                        <Crop className="w-4 h-4" />
+                        Apply crop
+                      </Button>
+                    </div>
+                  </div>
+                ) : imagePreview ? (
+                  <div className="mt-4 relative group w-full rounded-lg border border-gray-200 bg-slate-100 flex items-center justify-center p-2 sm:p-3 min-h-[12rem] max-h-[min(70vh,28rem)]">
+                    <img
+                      src={imagePreview}
+                      alt="Event poster preview"
+                      className="max-h-[min(65vh,26rem)] w-full max-w-full h-auto object-contain object-center"
+                    />
+                    <div className="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover:pointer-events-auto">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setImageFile(null);
+                          setImagePreview(null);
+                        }}
+                      >
+                        <X className="w-4 h-4 mr-1" /> Remove image
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               {/* Event Name */}

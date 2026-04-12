@@ -51,6 +51,10 @@ const createPayment = async (req, res) => {
         });
         await payment.save();
 
+        // Update booking with payment reference
+        booking.payment = payment._id;
+        await booking.save();
+
         await new PaymentLogs({
             paymentId: payment._id,
             action: 'created',
@@ -179,6 +183,10 @@ const createPaymentIntent = async (req, res) => {
         });
         await payment.save();
 
+        // Update booking with payment reference
+        booking.payment = payment._id;
+        await booking.save();
+
         await new PaymentLogs({
             paymentId: payment._id,
             action: 'created',
@@ -230,6 +238,22 @@ const confirmPayment = async (req, res) => {
         payment.transactionId = stripePaymentIntentId;
         payment.paidAt = new Date();
         await payment.save();
+
+        // ─── CRITICAL FIX: Confirm the booking if this is a venue-booking ──────
+        if (payment.paymentType === 'venue-booking' && payment.bookingId) {
+            const booking = await Booking.findById(payment.bookingId);
+            if (booking && booking.status !== 'confirmed') {
+                booking.status = 'confirmed';
+                booking.statusHistory.push({
+                    status: 'confirmed',
+                    changedAt: new Date(),
+                    changedBy: payment.userId,
+                    reason: 'Payment confirmed via Stripe.'
+                });
+                await booking.save();
+            }
+        }
+        // ───────────────────────────────────────────────────────────────
 
         await new PaymentLogs({
             paymentId: payment._id,
@@ -473,6 +497,30 @@ const updatePaymentStatus = async (req, res) => {
 
         await payment.save();
 
+        // ─── CRITICAL FIX: Confirm or update the booking status ──────
+        if (payment.paymentType === 'venue-booking' && payment.bookingId) {
+            const booking = await Booking.findById(payment.bookingId);
+            if (booking) {
+                // Map payment status to booking status if needed
+                // For now, if payment is completed, booking is confirmed
+                if (paymentStatus === 'completed' && booking.status !== 'confirmed') {
+                    booking.status = 'confirmed';
+                    booking.statusHistory.push({
+                        status: 'confirmed',
+                        changedAt: new Date(),
+                        changedBy: req.user?._id || payment.userId, // req.user is admin here
+                        reason: 'Payment status manually updated to completed by admin.'
+                    });
+                    await booking.save();
+                } else if (paymentStatus === 'refunded' && booking.status !== 'cancelled') {
+                    // Optional: cancel booking if refunded?
+                    // booking.status = 'cancelled';
+                    // await booking.save();
+                }
+            }
+        }
+        // ───────────────────────────────────────────────────────────────
+
         await new PaymentLogs({
             paymentId: payment._id,
             action: paymentStatus === 'failed' ? 'failed' : 'updated',
@@ -507,6 +555,22 @@ const processPayment = async (req, res) => {
             payment.transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
             payment.paidAt = new Date();
             await payment.save();
+
+            // ─── CRITICAL FIX: Confirm the booking if this is a venue-booking ──────
+            if (payment.paymentType === 'venue-booking' && payment.bookingId) {
+                const booking = await Booking.findById(payment.bookingId);
+                if (booking && booking.status !== 'confirmed') {
+                    booking.status = 'confirmed';
+                    booking.statusHistory.push({
+                        status: 'confirmed',
+                        changedAt: new Date(),
+                        changedBy: payment.userId,
+                        reason: 'Mock payment processed successfully.'
+                    });
+                    await booking.save();
+                }
+            }
+            // ───────────────────────────────────────────────────────────────
 
             const logMessage = payment.paymentType === 'event-registration'
                 ? `Mock payment processed for "${payment.eventId?.name}". TXN: ${payment.transactionId}`
