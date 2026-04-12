@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
-const Event = require('../models/Event');
-const Booking = require('../models/Booking');
+const Event = require('../models/Event.js');
+const Booking = require('../models/Booking.js');
+const { normalizeTime } = require('../utils/timeUtils');
 const User = require('../models/User');
 const { sendRegistrationConfirmation, sendCancellationNotice } = require('../services/emailService');
 
@@ -87,8 +88,13 @@ exports.createEvent = async (req, res) => {
       });
     }
 
+    // Normalize times
+    if (schedule?.startTime) schedule.startTime = normalizeTime(schedule.startTime);
+    if (schedule?.endTime) schedule.endTime = normalizeTime(schedule.endTime);
+
     const event = await Event.create({
       ...req.body,
+      schedule,
       organizer: req.user._id  // Always take from JWT, not from client
     });
 
@@ -474,14 +480,14 @@ exports.publishEvent = async (req, res) => {
       // Fallback 1: By direct reference (if the event ID is stored on the booking)
       booking = await Booking.findOne({ event: event._id });
 
-      // Fallback 2: Match by exact schedule and capacity
+      // Fallback 2: Match by exact schedule and capacity (normalizing times for comparison)
       if (!booking) {
         booking = await Booking.findOne({
           user: event.organizer,
           facility: event.facility,
           date: event.schedule.date,
-          startTime: event.schedule.startTime,
-          endTime: event.schedule.endTime,
+          startTime: normalizeTime(event.schedule.startTime),
+          endTime: normalizeTime(event.schedule.endTime),
           'attendees.expected': event.attendance.maxAttendees,
           status: { $ne: 'cancelled' }
         });

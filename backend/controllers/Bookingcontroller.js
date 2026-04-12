@@ -13,7 +13,7 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Facility = require('../models/Facilities');
 const { getCalendarBookings, pushToGoogleCalendar } = require('../services/BookingCalendar');
-
+const { normalizeTime } = require('../utils/timeUtils');
 
 // 1. CREATE BOOKING
 
@@ -31,6 +31,10 @@ const createBooking = async (req, res) => {
             specialRequests,
             externalFacilityData
         } = req.body;
+
+        // Normalize times
+        startTime = normalizeTime(startTime) || startTime;
+        endTime = normalizeTime(endTime) || endTime;
 
         // Use authenticated user from JWT
         const user = req.user.id;
