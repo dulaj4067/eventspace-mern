@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { CreditCard, Trash2, Search, X, ImageIcon, ZoomIn } from 'lucide-react';
+import { getAssetUrl } from '../../utils/assetUtils';
 import { Badge } from '../ui/badge.jsx';
 import { Button } from '../ui/button.jsx';
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
@@ -249,8 +250,8 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
                                 className="relative group w-20 h-14 rounded-lg overflow-hidden border-2 border-indigo-200 hover:border-indigo-400 transition-colors flex-shrink-0"
                                 title="View full slip"
                               >
-                                <img
-                                  src={payment.bankSlipUrl}
+                                 <img
+                                  src={getAssetUrl(payment.bankSlipUrl)}
                                   alt="Bank slip"
                                   className="w-full h-full object-cover"
                                 />
@@ -350,8 +351,8 @@ export function AdminPaymentsTab({ payments, loading, onDelete, onUpdateStatus }
 
             {/* Image */}
             <div className="bg-gray-100 flex items-center justify-center p-4 max-h-[75vh] overflow-auto">
-              <img
-                src={slipModal}
+               <img
+                src={getAssetUrl(slipModal)}
                 alt="Bank transfer slip"
                 className="max-w-full rounded-lg shadow"
               />

@@ -46,10 +46,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Serve uploaded files (bank slips, images, etc.) as static
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve uploaded files (bank slips, images, etc.) with CORS support for cross-domain access
+app.use('/uploads', cors(), express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use("/api/users", userRoutes);
