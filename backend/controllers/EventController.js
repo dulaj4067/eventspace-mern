@@ -471,20 +471,20 @@ exports.publishEvent = async (req, res) => {
     // ─── LINKAGE FALLBACK ───────────────────────────────────────────
     // If no booking linked directly, try to find one that references this event
     if (!booking) {
-      // Fallback 1: By direct reference
+      // Fallback 1: By direct reference (if the event ID is stored on the booking)
       booking = await Booking.findOne({ event: event._id });
-      
-      // Fallback 2: By string match if reason matches description/name
+
+      // Fallback 2: Match by exact schedule and capacity
       if (!booking) {
-        const searchTerms = [event.name, event.description].filter(Boolean);
-        if (searchTerms.length > 0) {
-          booking = await Booking.findOne({
-            user: event.organizer,
-            facility: event.facility,
-            purpose: { $regex: new RegExp(`^(${searchTerms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`, 'i') },
-            status: { $ne: 'cancelled' }
-          });
-        }
+        booking = await Booking.findOne({
+          user: event.organizer,
+          facility: event.facility,
+          date: event.schedule.date,
+          startTime: event.schedule.startTime,
+          endTime: event.schedule.endTime,
+          'attendees.expected': event.attendance.maxAttendees,
+          status: { $ne: 'cancelled' }
+        });
       }
 
       if (booking) {
