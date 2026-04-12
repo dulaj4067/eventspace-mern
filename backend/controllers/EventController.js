@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
-const Event = require('../models/Event');
-const Booking = require('../models/Booking');
+const Event = require('../models/Event.js');
+const Booking = require('../models/Booking.js');
+const { normalizeTime } = require('../utils/timeUtils');
 const User = require('../models/User');
 const { sendRegistrationConfirmation, sendCancellationNotice } = require('../services/emailService');
 
@@ -87,8 +88,13 @@ exports.createEvent = async (req, res) => {
       });
     }
 
+    // Normalize times
+    if (schedule?.startTime) schedule.startTime = normalizeTime(schedule.startTime);
+    if (schedule?.endTime) schedule.endTime = normalizeTime(schedule.endTime);
+
     const event = await Event.create({
       ...req.body,
+      schedule,
       organizer: req.user._id  // Always take from JWT, not from client
     });
 
@@ -466,13 +472,54 @@ exports.publishEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot publish a cancelled event' });
 
     // ── Booking Validation ──────────────────────────────────────────
-    const booking = await Booking.findById(event.booking);
+    let booking = await Booking.findById(event.booking);
+    
+    // ─── LINKAGE FALLBACK ───────────────────────────────────────────
+    // If no booking linked directly, try to find one that references this event
+    if (!booking) {
+      // Fallback 1: By direct reference (if the event ID is stored on the booking)
+      booking = await Booking.findOne({ event: event._id });
+
+      // Fallback 2: Match by exact schedule and capacity (normalizing times for comparison)
+      if (!booking) {
+        booking = await Booking.findOne({
+          user: event.organizer,
+          facility: event.facility,
+          date: event.schedule.date,
+          startTime: normalizeTime(event.schedule.startTime),
+          endTime: normalizeTime(event.schedule.endTime),
+          'attendees.expected': event.attendance.maxAttendees,
+          status: { $ne: 'cancelled' }
+        });
+      }
+
+      if (booking) {
+        event.booking = booking._id;
+        await event.save();
+      }
+    }
+    // ───────────────────────────────────────────────────────────────
 
     if (!booking)
-      return res.status(400).json({ success: false, message: 'No booking linked to this event' });
+      return res.status(400).json({ success: false, message: 'No booking linked to this event. Please book a facility first.' });
 
-    if (booking.status !== 'confirmed')
-      return res.status(400).json({ success: false, message: 'Booking must be confirmed before publishing event' });
+    if (booking.status !== 'confirmed') {
+      // Defensive check: Maybe the payment is completed but booking status didn't update (previous bug)
+      const Payment = require('../models/Payments');
+      const payment = await Payment.findOne({ bookingId: booking._id, paymentStatus: 'completed' });
+      
+      if (payment) {
+        booking.status = 'confirmed';
+        booking.statusHistory.push({
+          status: 'confirmed',
+          changedBy: event.organizer,
+          reason: 'Auto-confirmed during publish because a completed payment was found.'
+        });
+        await booking.save();
+      } else {
+        return res.status(400).json({ success: false, message: 'Booking must be confirmed before publishing event' });
+      }
+    }
 
     if (new Date(booking.date).toDateString() !== new Date(event.schedule.date).toDateString())
       return res.status(400).json({ success: false, message: 'Booking date does not match event date' });

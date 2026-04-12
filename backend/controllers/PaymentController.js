@@ -51,6 +51,10 @@ const createPayment = async (req, res) => {
         });
         await payment.save();
 
+        // Update booking with payment reference
+        booking.payment = payment._id;
+        await booking.save();
+
         await new PaymentLogs({
             paymentId: payment._id,
             action: 'created',
@@ -179,6 +183,10 @@ const createPaymentIntent = async (req, res) => {
         });
         await payment.save();
 
+        // Update booking with payment reference
+        booking.payment = payment._id;
+        await booking.save();
+
         await new PaymentLogs({
             paymentId: payment._id,
             action: 'created',
@@ -230,6 +238,11 @@ const confirmPayment = async (req, res) => {
         payment.transactionId = stripePaymentIntentId;
         payment.paidAt = new Date();
         await payment.save();
+
+        // ───────────────────────────────────────────────────────────────
+        // NOTE: Booking status is NOT automatically set to 'confirmed' here.
+        // The admin must manually approve the booking via the Admin Dashboard.
+        // ───────────────────────────────────────────────────────────────
 
         await new PaymentLogs({
             paymentId: payment._id,
@@ -473,6 +486,11 @@ const updatePaymentStatus = async (req, res) => {
 
         await payment.save();
 
+        // ───────────────────────────────────────────────────────────────
+        // NOTE: Booking status is NOT automatically set to 'confirmed' here.
+        // Even when payment is approved, admin must separately review and approve the booking.
+        // ───────────────────────────────────────────────────────────────
+
         await new PaymentLogs({
             paymentId: payment._id,
             action: paymentStatus === 'failed' ? 'failed' : 'updated',
@@ -507,6 +525,10 @@ const processPayment = async (req, res) => {
             payment.transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
             payment.paidAt = new Date();
             await payment.save();
+
+            // ───────────────────────────────────────────────────────────────
+            // NOTE: Booking status is NOT automatically set to 'confirmed' here.
+            // ───────────────────────────────────────────────────────────────
 
             const logMessage = payment.paymentType === 'event-registration'
                 ? `Mock payment processed for "${payment.eventId?.name}". TXN: ${payment.transactionId}`

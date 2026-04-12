@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader } from '../ui/card.jsx';
 import { Building, DollarSign, Users, Image as ImageIcon, Crop, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAssetUrl } from '../../utils/assetUtils';
 import Cropper from 'react-easy-crop';
 import {
   EXTERNAL_CENTERS_STORAGE_KEY,
@@ -146,7 +147,7 @@ export function EditFacility() {
             f.images?.find((img) => img.isPrimary)?.url ||
             f.images?.[0]?.url;
           if (primary) {
-            setImagePreview(primary);
+            setImagePreview(getAssetUrl(primary));
           }
           setExistingImages(f.images || []);
         }
@@ -356,8 +357,8 @@ export function EditFacility() {
                     </div>
                   ) : imagePreview ? (
                     <div className="mt-4 relative group w-full h-48 rounded-lg overflow-hidden border border-gray-200">
-                      <img
-                        src={imagePreview}
+                       <img
+                        src={getAssetUrl(imagePreview)}
                         alt="Facility cover preview"
                         className="w-full h-full object-cover aspect-[16/9]"
                       />

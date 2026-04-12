@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { getMyEvents } from '../../services/eventService';
 import { Calendar, Clock, MapPin, Users, Plus, Pencil } from 'lucide-react';
+import { getAssetUrl } from '../../utils/assetUtils';
+import { getEventImage } from '../../services/eventService';
 import { toast } from 'sonner';
 
 const getUserFromToken = () => {
@@ -110,7 +112,13 @@ export function MyEvents() {
                   className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden"
                 >
                   {/* Status Badge */}
-                  <div className="bg-gradient-to-r from-blue-400 to-purple-400 h-32 relative">
+                  <div className="h-32 relative overflow-hidden">
+                    <img 
+                      src={getAssetUrl(event.image) || getEventImage(event.type)} 
+                      alt={event.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/10" />
                     <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(event.status)}`}>
                       {event.status}
                     </span>

@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import { getEventImage } from '../../services/eventService';
 import { ModernPagination } from '../common/ModernPagination.jsx';
 import { eventIcon, MAP_TILES } from '../../utils/mapUtils';
+import { getAssetUrl } from '../../utils/assetUtils';
 
 function MapController({ center, zoom }) {
   const map = useMap();
@@ -218,7 +219,7 @@ export function EventsView({
                       <div className="p-3 min-w-[240px]">
                         <div className="h-36 mb-4 overflow-hidden rounded-[1.25rem] relative group/map">
                            <img 
-                              src={event.image || getEventImage(event.type)} 
+                              src={getAssetUrl(event.image) || getEventImage(event.type)} 
                               alt={event.name}
                               className="w-full h-full object-cover transition-transform duration-700 group-hover/map:scale-115" 
                            />
@@ -269,7 +270,7 @@ export function EventsView({
                 <Card key={event._id} className="overflow-hidden border-none shadow-sm hover:shadow-2xl transition-all duration-500 group rounded-[1.5rem] bg-white h-full flex flex-col">
                   <div className="relative h-56 overflow-hidden">
                     <img
-                      src={event.image || getEventImage(event.type)}
+                      src={getAssetUrl(event.image) || getEventImage(event.type)}
                       alt={event.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
