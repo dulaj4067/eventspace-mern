@@ -466,7 +466,34 @@ exports.publishEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot publish a cancelled event' });
 
     // ── Booking Validation ──────────────────────────────────────────
-    const booking = await Booking.findById(event.booking);
+    let booking = null;
+    if (event.booking) {
+      booking = await Booking.findById(event.booking);
+    }
+
+    if (!booking) {
+      // Find a booking created by the organizer for the same facility on the same date
+      const startOfDay = new Date(event.schedule.date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(event.schedule.date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      booking = await Booking.findOne({
+        user: event.organizer,
+        facility: event.facility,
+        date: { $gte: startOfDay, $lte: endOfDay }
+      }).sort({ createdAt: -1 });
+
+      if (booking) {
+        event.booking = booking._id; // link it
+        
+        // Link the booking back to this event too if not already linked
+        if (!booking.event || booking.event.toString() !== event._id.toString()) {
+          booking.event = event._id;
+          await booking.save();
+        }
+      }
+    }
 
     if (!booking)
       return res.status(400).json({ success: false, message: 'No booking linked to this event' });

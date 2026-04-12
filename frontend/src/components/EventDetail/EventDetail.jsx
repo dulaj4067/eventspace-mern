@@ -103,13 +103,7 @@ export function EventDetail() {
       setEvent(response.data.data);
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to publish event';
-      if (message.includes('booking')) {
-        toast.error('You need a confirmed booking before publishing. Please book a facility first.');
-      } else if (message.includes('confirmed')) {
-        toast.error('Your booking must be confirmed by admin before publishing.');
-      } else {
-        toast.error(message);
-      }
+      toast.error(message);
     }
   };
 
