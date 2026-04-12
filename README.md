@@ -205,6 +205,7 @@ We use **Jest** and **React Testing Library** to validate component logic and re
    ```bash
    CI=true npm test -- --coverage
    ```
+![alt text](image-1.png)   
 
 ### Backend (Logic & Utility Tests)
 Backend logic (e.g., token generation, date sanitization) is validated primarily via Jest.
@@ -220,6 +221,9 @@ Backend logic (e.g., token generation, date sanitization) is validated primarily
    ```
 
 ---
+
+![alt text](image.png)
+
 
 ## II. Integration Testing Setup & Execution
 Integration tests are designed to strike the backend API architecture using **Supertest** mixed with **Jest**, bypassing UI rendering delays and hitting APIs directly.
